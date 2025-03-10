@@ -8,6 +8,7 @@ import com.mealplanner.foodmanage.NutritionDataParser;
 public class MealPlanner {
     private List<Food> foodDatabase;
     private NutritionCalculator nutritionCalculator;
+    private MealOptimizer mealOptimizer;
     private static final double MEAL_RATIO_BREAKFAST = 0.3;  // 早餐占比30%
     private static final double MEAL_RATIO_LUNCH = 0.35;     // 午餐占比35%
     private static final double MEAL_RATIO_DINNER = 0.35;    // 晚餐占比35%
@@ -30,6 +31,7 @@ public class MealPlanner {
 
     public MealPlanner(UserProfile userProfile) {
         this.nutritionCalculator = new NutritionCalculator(userProfile);
+        this.mealOptimizer = new MealOptimizer();
         initializeFoodDatabase();
         initializeMaxFoodLimits();
         adjustWeightsByHealthConditions(userProfile.getHealthConditions());
@@ -120,6 +122,7 @@ public class MealPlanner {
         NutritionDataParser parser = new NutritionDataParser();
         try {
             foodDatabase = parser.convertToFoodObjects(parser.parseNutritionDataFromFile("src/main/resources/all.xlsx"));
+            // 数据库中的食物默认都是100g，保持这种方式，在使用时再调整摄入量
         } catch (IOException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
@@ -145,6 +148,20 @@ public class MealPlanner {
         List<Food> breakfast = generateMeal(breakfastNeeds, usedFoods, true);
         List<Food> lunch = generateMeal(lunchNeeds, usedFoods, true);
         List<Food> dinner = generateMeal(dinnerNeeds, usedFoods, true);
+
+        System.out.println("\n======= 开始多轮优化膳食计划 =======");
+        
+        // 多轮优化各餐的食物摄入量
+        System.out.println("\n--- 优化早餐 ---");
+        breakfast = mealOptimizer.optimizeMeal(breakfast, breakfastNeeds);
+        
+        System.out.println("\n--- 优化午餐 ---");
+        lunch = mealOptimizer.optimizeMeal(lunch, lunchNeeds);
+        
+        System.out.println("\n--- 优化晚餐 ---");
+        dinner = mealOptimizer.optimizeMeal(dinner, dinnerNeeds);
+        
+        System.out.println("\n======= 膳食计划优化完成 =======");
 
         // 创建每日膳食计划
         DailyMealPlan dailyPlan = new DailyMealPlan(breakfast, lunch, dinner);
@@ -353,7 +370,7 @@ public class MealPlanner {
         }
         
         // 如果因为营养素限制导致无法添加足够的食物，记录警告信息
-        if (attemptCount >= maxAttempts) {
+        if (meal.size() < 3 && attemptCount >= maxAttempts) {
             System.out.println("警告：由于营养素限制，无法找到足够的食物组成一餐。");
         }
         
@@ -366,10 +383,16 @@ public class MealPlanner {
         
         for (Food food : foodDatabase) {
             if (food.getCategory().equals("staple") && !usedFoods.contains(food.getName())) {
-                double score = calculateFoodScore(food, targetNutrients);
+                // 计算该食物的最佳摄入量
+                double optimalIntake = food.calculateOptimalIntake(targetNutrients);
+                
+                // 使用最佳摄入量创建新的食物对象
+                Food foodWithOptimalIntake = food.withIntake(optimalIntake);
+                
+                double score = calculateFoodScore(foodWithOptimalIntake, targetNutrients);
                 if (score > bestScore) {
                     bestScore = score;
-                    bestStaple = food;
+                    bestStaple = foodWithOptimalIntake;
                 }
             }
         }
@@ -393,11 +416,17 @@ public class MealPlanner {
                 continue;
             }
             
+            // 计算该食物的最佳摄入量
+            double optimalIntake = food.calculateOptimalIntake(targetNutrients);
+            
+            // 使用最佳摄入量创建新的食物对象
+            Food foodWithOptimalIntake = food.withIntake(optimalIntake);
+            
             // 计算食物评分
-            double score = calculateFoodScore(food, targetNutrients);
+            double score = calculateFoodScore(foodWithOptimalIntake, targetNutrients);
             if (score > bestScore) {
                 bestScore = score;
-                bestFood = food;
+                bestFood = foodWithOptimalIntake;
             }
         }
         

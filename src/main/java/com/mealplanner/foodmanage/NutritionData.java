@@ -139,6 +139,25 @@ public class NutritionData {
             // 解析基本信息
             String name = sampleName != null ? sampleName : "未知食物";
             String category = foodCategory != null ? foodCategory : "其他";
+            if(category.equals("穀物類")){
+                category = "staple";
+            }else if(category.equals("蔬菜類")){
+                category = "vegetable";
+            }else if(category.equals("水果類")){
+                category = "fruit";
+            }else if(category.equals("肉類")){
+                category = "meat";
+            }else if(category.equals("魚類")){
+                category = "fish";
+            }else if(category.equals("蛋類")){
+                category = "egg";
+            }else if(category.equals("乳品類")){
+                category = "milk";
+            }else if(category.equals("油脂類")){
+                category = "oil";
+            }else if(category.equals("其他")){
+                category = "other";
+            }
             
             // 解析营养成分
             double carbsValue = parseDouble(carbohydrates);
