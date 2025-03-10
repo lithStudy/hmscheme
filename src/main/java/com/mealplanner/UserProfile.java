@@ -38,5 +38,15 @@ public class UserProfile {
     public int getAge() { return age; }
     public String getGender() { return gender; }
     public double getActivityLevel() { return activityLevel; }
-    public String[] getHealthConditions() { return healthConditions; }
+    public String[] getHealthConditions() {
+        return healthConditions;
+    }
+    
+    /**
+     * 设置健康状况
+     * @param healthConditions 健康状况数组
+     */
+    public void setHealthConditions(String[] healthConditions) {
+        this.healthConditions = healthConditions;
+    }
 } 

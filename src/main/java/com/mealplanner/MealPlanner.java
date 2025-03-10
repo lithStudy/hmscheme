@@ -12,6 +12,10 @@ public class MealPlanner {
     private static final double MEAL_RATIO_LUNCH = 0.35;     // 午餐占比35%
     private static final double MEAL_RATIO_DINNER = 0.35;    // 晚餐占比35%
 
+    // 各类食物的最大数量限制
+    private Map<String, Integer> maxFoodPerCategory;
+    private static final int DEFAULT_MAX_FOODS_PER_CATEGORY = 2;  // 默认每类食物最多2个
+
     // 营养素权重
     private double weightCalorie = 1.0;   // 热量权重
     private double weightCarb = 1.0;      // 碳水化合物权重
@@ -27,7 +31,34 @@ public class MealPlanner {
     public MealPlanner(UserProfile userProfile) {
         this.nutritionCalculator = new NutritionCalculator(userProfile);
         initializeFoodDatabase();
+        initializeMaxFoodLimits();
         adjustWeightsByHealthConditions(userProfile.getHealthConditions());
+    }
+
+    /**
+     * 初始化各类食物的最大数量限制
+     */
+    private void initializeMaxFoodLimits() {
+        maxFoodPerCategory = new HashMap<>();
+        // 主食类最多只需要1个
+        maxFoodPerCategory.put("staple", 1);
+        // 其他食物类别默认最多2个（可以根据需要修改）
+        // 示例：蔬菜类可以允许更多
+        maxFoodPerCategory.put("vegetable", 3);
+        maxFoodPerCategory.put("fruit", 2);
+        
+    }
+
+    /**
+     * 设置特定食物类别的最大数量限制
+     * @param category 食物类别
+     * @param maxCount 最大数量
+     */
+    public void setMaxFoodLimit(String category, int maxCount) {
+        if (maxCount < 0) {
+            throw new IllegalArgumentException("食物数量限制不能为负数");
+        }
+        maxFoodPerCategory.put(category, maxCount);
     }
 
     /**
@@ -93,129 +124,6 @@ public class MealPlanner {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
-        
-        // // 主食类
-        // foodDatabase.add(new Food("糙米", "staple", 
-        //     new Nutrition(75.0, 7.5, 2.0, 10.0, 150.0, 5.0, 100.0),
-        //     new Portion(100.0, "克", 100.0)));
-            
-        // foodDatabase.add(new Food("全麦面包", "staple", 
-        //     new Nutrition(50.0, 8.0, 3.0, 20.0, 120.0, 400.0, 80.0),
-        //     new Portion(60.0, "片", 2.0)));
-            
-        // foodDatabase.add(new Food("燕麦", "staple", 
-        //     new Nutrition(66.0, 16.9, 6.9, 54.0, 429.0, 2.0, 177.0),
-        //     new Portion(50.0, "克", 50.0)));
-            
-        // foodDatabase.add(new Food("藜麦", "staple", 
-        //     new Nutrition(64.0, 14.1, 6.1, 47.0, 563.0, 5.0, 197.0),
-        //     new Portion(80.0, "克", 80.0)));
-            
-        // foodDatabase.add(new Food("红薯", "staple", 
-        //     new Nutrition(20.0, 1.6, 0.1, 30.0, 337.0, 55.0, 25.0),
-        //     new Portion(150.0, "个", 1.0)));
-        
-        // // 蔬菜类
-        // foodDatabase.add(new Food("西兰花", "vegetables", 
-        //     new Nutrition(7.0, 2.8, 0.4, 47.0, 316.0, 33.0, 21.0),
-        //     new Portion(100.0, "克", 100.0)));
-            
-        // foodDatabase.add(new Food("菠菜", "vegetables", 
-        //     new Nutrition(3.6, 2.9, 0.4, 99.0, 558.0, 79.0, 79.0),
-        //     new Portion(100.0, "克", 100.0)));
-            
-        // foodDatabase.add(new Food("胡萝卜", "vegetables", 
-        //     new Nutrition(9.6, 0.9, 0.2, 33.0, 320.0, 69.0, 12.0),
-        //     new Portion(80.0, "根", 1.0)));
-            
-        // foodDatabase.add(new Food("青椒", "vegetables", 
-        //     new Nutrition(4.6, 1.0, 0.3, 7.0, 175.0, 3.0, 12.0),
-        //     new Portion(70.0, "个", 1.0)));
-            
-        // foodDatabase.add(new Food("西红柿", "vegetables", 
-        //     new Nutrition(3.9, 0.9, 0.2, 10.0, 237.0, 5.0, 11.0),
-        //     new Portion(150.0, "个", 1.0)));
-        
-        // // 蛋白质类
-        // foodDatabase.add(new Food("鸡胸肉", "protein", 
-        //     new Nutrition(0.0, 23.1, 1.2, 12.0, 256.0, 45.0, 23.0),
-        //     new Portion(100.0, "克", 100.0)));
-            
-        // foodDatabase.add(new Food("三文鱼", "protein", 
-        //     new Nutrition(0.0, 20.0, 13.0, 9.0, 363.0, 50.0, 27.0),
-        //     new Portion(100.0, "克", 100.0)));
-            
-        // foodDatabase.add(new Food("鸡蛋", "protein", 
-        //     new Nutrition(1.1, 13.0, 11.0, 56.0, 138.0, 142.0, 12.0),
-        //     new Portion(50.0, "个", 1.0)));
-            
-        // foodDatabase.add(new Food("虾", "protein", 
-        //     new Nutrition(0.2, 24.0, 0.3, 52.0, 259.0, 119.0, 39.0),
-        //     new Portion(100.0, "克", 100.0)));
-            
-        // foodDatabase.add(new Food("瘦牛肉", "protein", 
-        //     new Nutrition(0.0, 26.0, 3.0, 5.0, 318.0, 54.0, 21.0),
-        //     new Portion(100.0, "克", 100.0)));
-        
-        // // 豆类
-        // foodDatabase.add(new Food("豆腐", "beans", 
-        //     new Nutrition(1.9, 8.1, 4.8, 350.0, 120.0, 7.0, 30.0),
-        //     new Portion(100.0, "克", 100.0)));
-            
-        // foodDatabase.add(new Food("黑豆", "beans", 
-        //     new Nutrition(63.0, 21.0, 1.0, 102.0, 1483.0, 2.0, 171.0),
-        //     new Portion(50.0, "克", 50.0)));
-            
-        // foodDatabase.add(new Food("鹰嘴豆", "beans", 
-        //     new Nutrition(63.0, 19.0, 6.0, 49.0, 875.0, 24.0, 115.0),
-        //     new Portion(50.0, "克", 50.0)));
-            
-        // foodDatabase.add(new Food("扁豆", "beans", 
-        //     new Nutrition(63.0, 25.0, 1.0, 19.0, 955.0, 2.0, 71.0),
-        //     new Portion(50.0, "克", 50.0)));
-        
-        // // 水果类
-        // foodDatabase.add(new Food("苹果", "fruits", 
-        //     new Nutrition(14.0, 0.3, 0.2, 6.0, 107.0, 1.0, 5.0),
-        //     new Portion(150.0, "个", 1.0)));
-            
-        // foodDatabase.add(new Food("香蕉", "fruits", 
-        //     new Nutrition(23.0, 1.1, 0.3, 5.0, 358.0, 1.0, 27.0),
-        //     new Portion(120.0, "根", 1.0)));
-            
-        // foodDatabase.add(new Food("橙子", "fruits", 
-        //     new Nutrition(11.8, 0.9, 0.1, 40.0, 181.0, 0.0, 10.0),
-        //     new Portion(180.0, "个", 1.0)));
-            
-        // foodDatabase.add(new Food("蓝莓", "fruits", 
-        //     new Nutrition(14.5, 0.7, 0.3, 6.0, 77.0, 1.0, 6.0),
-        //     new Portion(100.0, "克", 100.0)));
-            
-        // foodDatabase.add(new Food("草莓", "fruits", 
-        //     new Nutrition(7.7, 0.7, 0.3, 16.0, 153.0, 1.0, 13.0),
-        //     new Portion(100.0, "克", 100.0)));
-        
-        // // 乳制品
-        // foodDatabase.add(new Food("低脂牛奶", "dairy", 
-        //     new Nutrition(4.8, 3.4, 1.0, 122.0, 156.0, 42.0, 11.0),
-        //     new Portion(250.0, "杯", 1.0)));
-            
-        // foodDatabase.add(new Food("酸奶", "dairy", 
-        //     new Nutrition(4.7, 3.5, 1.5, 121.0, 155.0, 46.0, 12.0),
-        //     new Portion(200.0, "杯", 1.0)));
-            
-        // foodDatabase.add(new Food("奶酪", "dairy", 
-        //     new Nutrition(1.3, 7.0, 9.0, 721.0, 98.0, 621.0, 28.0),
-        //     new Portion(30.0, "片", 1.0)));
-        
-        // // 坚果类
-        // foodDatabase.add(new Food("杏仁", "nuts", 
-        //     new Nutrition(21.6, 21.2, 49.9, 269.0, 733.0, 1.0, 270.0),
-        //     new Portion(30.0, "克", 30.0)));
-            
-        // foodDatabase.add(new Food("核桃", "nuts", 
-        //     new Nutrition(13.7, 15.2, 65.2, 98.0, 441.0, 2.0, 158.0),
-        //     new Portion(30.0, "克", 30.0)));
     }
 
     /**
@@ -273,48 +181,66 @@ public class MealPlanner {
         System.out.println("\n晚餐营养素详情:");
         printNutrientSummary(dinnerSummary);
         
-        // 打印全天总营养素与目标对比
-        System.out.println("\n全天营养素总结与目标对比:");
-        System.out.printf("热量: %.1f kcal / %.1f kcal (%.1f%%)\n", 
-                dailySummary.calories, dailyNeeds.getTotalCalories(), 
-                (dailySummary.calories / dailyNeeds.getTotalCalories()) * 100);
-                
-        System.out.printf("碳水: %.1f g / %.1f g (%.1f%%)\n", 
-                dailySummary.carbs, dailyNeeds.getCarbohydrates(), 
-                (dailySummary.carbs / dailyNeeds.getCarbohydrates()) * 100);
-                
-        System.out.printf("蛋白质: %.1f g / %.1f g (%.1f%%)\n", 
-                dailySummary.protein, dailyNeeds.getProtein(), 
-                (dailySummary.protein / dailyNeeds.getProtein()) * 100);
-                
-        System.out.printf("脂肪: %.1f g / %.1f g (%.1f%%)\n", 
-                dailySummary.fat, dailyNeeds.getFat(), 
-                (dailySummary.fat / dailyNeeds.getFat()) * 100);
-                
-        System.out.printf("钙: %.1f mg / %.1f mg (%.1f%%)\n", 
-                dailySummary.calcium, dailyNeeds.getCalcium(), 
-                (dailySummary.calcium / dailyNeeds.getCalcium()) * 100);
-                
-        System.out.printf("钾: %.1f mg / %.1f mg (%.1f%%)\n", 
-                dailySummary.potassium, dailyNeeds.getPotassium(), 
-                (dailySummary.potassium / dailyNeeds.getPotassium()) * 100);
-                
-        System.out.printf("钠: %.1f mg / %.1f mg (%.1f%%)\n", 
-                dailySummary.sodium, dailyNeeds.getSodium(), 
-                (dailySummary.sodium / dailyNeeds.getSodium()) * 100);
-                
-        System.out.printf("镁: %.1f mg / %.1f mg (%.1f%%)\n", 
-                dailySummary.magnesium, dailyNeeds.getMagnesium(), 
-                (dailySummary.magnesium / dailyNeeds.getMagnesium()) * 100);
+        // 打印全天总营养素
+        System.out.println("\n全天营养素总计:");
+        printNutrientSummary(dailySummary);
         
-        // 打印营养素权重信息
-        System.out.println("\n当前营养素权重设置:");
-        System.out.printf("热量: %.1f, 碳水: %.1f, 蛋白质: %.1f, 脂肪: %.1f\n", 
-                weightCalorie, weightCarb, weightProtein, weightFat);
-        System.out.printf("钙: %.1f, 钾: %.1f, 钠: %.1f, 镁: %.1f, 磷: %.1f, 铁: %.1f\n", 
-                weightCalcium, weightPotassium, weightSodium, weightMagnesium, weightPhosphorus, weightIron);
+        // 打印目标营养素
+        System.out.println("\n目标营养素:");
+        System.out.printf("总热量: %.1f kcal\n", dailyNeeds.getTotalCalories());
+        System.out.printf("碳水化合物: %.1f g (%.1f%%)\n", 
+                        dailyNeeds.getCarbohydrates(), 
+                        dailyNeeds.getCarbohydrates() * 4 / dailyNeeds.getTotalCalories() * 100);
+        System.out.printf("蛋白质: %.1f g (%.1f%%)\n", 
+                        dailyNeeds.getProtein(), 
+                        dailyNeeds.getProtein() * 4 / dailyNeeds.getTotalCalories() * 100);
+        System.out.printf("脂肪: %.1f g (%.1f%%)\n", 
+                        dailyNeeds.getFat(), 
+                        dailyNeeds.getFat() * 9 / dailyNeeds.getTotalCalories() * 100);
+        System.out.printf("钙: %.1f mg\n", dailyNeeds.getCalcium());
+        System.out.printf("钾: %.1f mg\n", dailyNeeds.getPotassium());
+        System.out.printf("钠: %.1f mg\n", dailyNeeds.getSodium());
+        System.out.printf("镁: %.1f mg\n", dailyNeeds.getMagnesium());
         
-        System.out.println("\n========== 食谱营养素分析结束 ==========");
+        // 打印营养素限制信息
+        printNutrientLimits();
+    }
+    
+    /**
+     * 打印营养素限制信息
+     */
+    private void printNutrientLimits() {
+        Map<String, NutrientLimit> limits = nutritionCalculator.getAllNutrientLimits();
+        if (limits.isEmpty()) {
+            System.out.println("\n没有特定的营养素限制。");
+            return;
+        }
+        
+        System.out.println("\n营养素限制:");
+        if (limits.containsKey("sodium")) {
+            NutrientLimit limit = limits.get("sodium");
+            System.out.printf("钠: %.1f - %.1f mg\n", limit.getMinValue(), limit.getMaxValue());
+        }
+        
+        if (limits.containsKey("carbohydrates")) {
+            NutrientLimit limit = limits.get("carbohydrates");
+            System.out.printf("碳水化合物: %.1f - %.1f g\n", limit.getMinValue(), limit.getMaxValue());
+        }
+        
+        if (limits.containsKey("protein")) {
+            NutrientLimit limit = limits.get("protein");
+            System.out.printf("蛋白质: %.1f - %.1f g\n", limit.getMinValue(), limit.getMaxValue());
+        }
+        
+        if (limits.containsKey("fat")) {
+            NutrientLimit limit = limits.get("fat");
+            System.out.printf("脂肪: %.1f - %.1f g\n", limit.getMinValue(), limit.getMaxValue());
+        }
+        
+        if (limits.containsKey("potassium")) {
+            NutrientLimit limit = limits.get("potassium");
+            System.out.printf("钾: %.1f - %.1f mg\n", limit.getMinValue(), limit.getMaxValue());
+        }
     }
     
     /**
@@ -379,6 +305,8 @@ public class MealPlanner {
         Map<String, Integer> categoryCount = new HashMap<>();
         // 剩余热量
         double remainingCalories = targetNutrients.calories;
+        // 用于跟踪尝试过但被限制规则拒绝的食物
+        Set<String> rejectedFoods = new HashSet<>();
         
         // 如果需要主食，先选择主食
         if (requireStaple) {
@@ -393,9 +321,27 @@ public class MealPlanner {
         }
         
         // 选择其他食物
-        while (remainingCalories > 0 && meal.size() < 5) {
-            Food bestFood = findBestFood(targetNutrients, categoryCount, usedFoods);
+        int attemptCount = 0;
+        int maxAttempts = 20; // 设置最大尝试次数，防止无限循环
+        
+        while (remainingCalories > 0 && meal.size() < 5 && attemptCount < maxAttempts) {
+            attemptCount++;
+            
+            // 合并已使用和已拒绝的食物集合，用于查找下一个最佳食物
+            Set<String> excludedFoods = new HashSet<>(usedFoods);
+            excludedFoods.addAll(rejectedFoods);
+            
+            Food bestFood = findBestFood(targetNutrients, categoryCount, excludedFoods);
             if (bestFood == null) break;
+            
+            // 检查添加这个食物后是否会超出营养素限制
+            List<Food> tempMeal = new ArrayList<>(meal);
+            tempMeal.add(bestFood);
+            if (!checkMealNutrientLimits(tempMeal)) {
+                // 如果超出限制，将食物添加到拒绝列表
+                rejectedFoods.add(bestFood.getName());
+                continue;
+            }
             
             meal.add(bestFood);
             remainingCalories -= bestFood.getCalories();
@@ -404,6 +350,11 @@ public class MealPlanner {
                             categoryCount.getOrDefault(bestFood.getCategory(), 0) + 1);
             
             targetNutrients = subtractNutrients(targetNutrients, bestFood);
+        }
+        
+        // 如果因为营养素限制导致无法添加足够的食物，记录警告信息
+        if (attemptCount >= maxAttempts) {
+            System.out.println("警告：由于营养素限制，无法找到足够的食物组成一餐。");
         }
         
         return meal;
@@ -437,7 +388,8 @@ public class MealPlanner {
             }
             
             // 限制每类食物的数量
-            if (categoryCount.getOrDefault(food.getCategory(), 0) >= 2) {
+            int maxAllowed = maxFoodPerCategory.getOrDefault(food.getCategory(), DEFAULT_MAX_FOODS_PER_CATEGORY);
+            if (categoryCount.getOrDefault(food.getCategory(), 0) >= maxAllowed) {
                 continue;
             }
             
@@ -466,6 +418,51 @@ public class MealPlanner {
         double potassiumScore = calculateNutrientScore(food.getPotassium(), target.potassium);
         double sodiumScore = calculateNutrientScore(food.getSodium(), target.sodium);
         double magnesiumScore = calculateNutrientScore(food.getMagnesium(), target.magnesium);
+        
+        // 检查是否有营养素超出限制
+        Map<String, NutrientLimit> nutrientLimits = nutritionCalculator.getAllNutrientLimits();
+        
+        // 应用营养素限制的惩罚
+        if (nutrientLimits.containsKey("sodium")) {
+            NutrientLimit sodiumLimit = nutrientLimits.get("sodium");
+            double sodiumDeviationScore = sodiumLimit.calculateDeviationScore(food.getSodium());
+            if (sodiumDeviationScore < 0) {
+                // 如果钠超出限制，降低评分，但不要过于严厉
+                sodiumScore = sodiumScore * (1.0 + sodiumDeviationScore * 2.0); // 降低惩罚系数
+            }
+        }
+        
+        if (nutrientLimits.containsKey("carbohydrates")) {
+            NutrientLimit carbLimit = nutrientLimits.get("carbohydrates");
+            double carbDeviationScore = carbLimit.calculateDeviationScore(food.getCarbohydrates());
+            if (carbDeviationScore < 0) {
+                carbScore = carbScore * (1.0 + carbDeviationScore * 2.0);
+            }
+        }
+        
+        if (nutrientLimits.containsKey("protein")) {
+            NutrientLimit proteinLimit = nutrientLimits.get("protein");
+            double proteinDeviationScore = proteinLimit.calculateDeviationScore(food.getProtein());
+            if (proteinDeviationScore < 0) {
+                proteinScore = proteinScore * (1.0 + proteinDeviationScore * 2.0);
+            }
+        }
+        
+        if (nutrientLimits.containsKey("fat")) {
+            NutrientLimit fatLimit = nutrientLimits.get("fat");
+            double fatDeviationScore = fatLimit.calculateDeviationScore(food.getFat());
+            if (fatDeviationScore < 0) {
+                fatScore = fatScore * (1.0 + fatDeviationScore * 2.0);
+            }
+        }
+        
+        if (nutrientLimits.containsKey("potassium")) {
+            NutrientLimit potassiumLimit = nutrientLimits.get("potassium");
+            double potassiumDeviationScore = potassiumLimit.calculateDeviationScore(food.getPotassium());
+            if (potassiumDeviationScore < 0) {
+                potassiumScore = potassiumScore * (1.0 + potassiumDeviationScore * 2.0);
+            }
+        }
         
         // 计算总权重
         double totalWeight = weightCalorie + weightCarb + weightProtein + weightFat +
@@ -520,6 +517,141 @@ public class MealPlanner {
             target.sodium - food.getSodium(),
             target.magnesium - food.getMagnesium()
         );
+    }
+
+    /**
+     * 检查一餐的总营养素是否符合限制
+     * @param foods 食物列表
+     * @return 是否符合所有限制
+     */
+    private boolean checkMealNutrientLimits(List<Food> foods) {
+        // 获取所有营养素限制
+        Map<String, NutrientLimit> nutrientLimits = nutritionCalculator.getAllNutrientLimits();
+        if (nutrientLimits.isEmpty()) {
+            return true; // 没有限制，直接返回true
+        }
+        
+        // 计算这餐的总营养素
+        double totalSodium = 0;
+        double totalCarbs = 0;
+        double totalProtein = 0;
+        double totalFat = 0;
+        double totalPotassium = 0;
+        
+        for (Food food : foods) {
+            totalSodium += food.getSodium();
+            totalCarbs += food.getCarbohydrates();
+            totalProtein += food.getProtein();
+            totalFat += food.getFat();
+            totalPotassium += food.getPotassium();
+        }
+        
+        // 检查是否超出限制
+        if (nutrientLimits.containsKey("sodium")) {
+            NutrientLimit sodiumLimit = nutrientLimits.get("sodium");
+            if (!sodiumLimit.isWithinLimit(totalSodium)) {
+                return false;
+            }
+        }
+        
+        if (nutrientLimits.containsKey("carbohydrates")) {
+            NutrientLimit carbLimit = nutrientLimits.get("carbohydrates");
+            if (!carbLimit.isWithinLimit(totalCarbs)) {
+                return false;
+            }
+        }
+        
+        if (nutrientLimits.containsKey("protein")) {
+            NutrientLimit proteinLimit = nutrientLimits.get("protein");
+            if (!proteinLimit.isWithinLimit(totalProtein)) {
+                return false;
+            }
+        }
+        
+        if (nutrientLimits.containsKey("fat")) {
+            NutrientLimit fatLimit = nutrientLimits.get("fat");
+            if (!fatLimit.isWithinLimit(totalFat)) {
+                return false;
+            }
+        }
+        
+        if (nutrientLimits.containsKey("potassium")) {
+            NutrientLimit potassiumLimit = nutrientLimits.get("potassium");
+            if (!potassiumLimit.isWithinLimit(totalPotassium)) {
+                return false;
+            }
+        }
+        
+        return true; // 所有检查都通过
+    }
+
+    /**
+     * 设置特定营养素的限制范围
+     * @param nutrientName 营养素名称（如"sodium"、"carbohydrates"等）
+     * @param minValue 最小值
+     * @param maxValue 最大值
+     */
+    public void setNutrientLimit(String nutrientName, double minValue, double maxValue) {
+        if (minValue > maxValue) {
+            throw new IllegalArgumentException("最小值不能大于最大值");
+        }
+        
+        // 创建一个临时的健康状况"custom"，用于存储自定义限制
+        Map<String, NutrientLimit> customLimits = nutritionCalculator.getDiseaseNutrientLimits()
+                .computeIfAbsent("custom", k -> new HashMap<>());
+        
+        // 设置限制
+        customLimits.put(nutrientName, new NutrientLimit(minValue, maxValue));
+        
+        // 确保用户的健康状况中包含"custom"
+        UserProfile userProfile = nutritionCalculator.getUserProfile();
+        String[] conditions = userProfile.getHealthConditions();
+        boolean hasCustom = false;
+        
+        if (conditions != null) {
+            for (String condition : conditions) {
+                if ("custom".equals(condition)) {
+                    hasCustom = true;
+                    break;
+                }
+            }
+        }
+        
+        if (!hasCustom) {
+            // 添加"custom"到健康状况
+            String[] newConditions;
+            if (conditions == null || conditions.length == 0) {
+                newConditions = new String[]{"custom"};
+            } else {
+                newConditions = new String[conditions.length + 1];
+                System.arraycopy(conditions, 0, newConditions, 0, conditions.length);
+                newConditions[conditions.length] = "custom";
+            }
+            userProfile.setHealthConditions(newConditions);
+        }
+    }
+
+    /**
+     * 清除所有自定义的营养素限制
+     */
+    public void clearCustomNutrientLimits() {
+        Map<String, Map<String, NutrientLimit>> limits = nutritionCalculator.getDiseaseNutrientLimits();
+        limits.remove("custom");
+        
+        // 从健康状况中移除"custom"
+        UserProfile userProfile = nutritionCalculator.getUserProfile();
+        String[] conditions = userProfile.getHealthConditions();
+        
+        if (conditions != null) {
+            List<String> newConditionsList = new ArrayList<>();
+            for (String condition : conditions) {
+                if (!"custom".equals(condition)) {
+                    newConditionsList.add(condition);
+                }
+            }
+            
+            userProfile.setHealthConditions(newConditionsList.toArray(new String[0]));
+        }
     }
 }
 
