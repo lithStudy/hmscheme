@@ -8,6 +8,13 @@ public class Food {
     private String category;     // 食物类别
     private Nutrition nutrition; // 营养信息（每100克）
     private Portion portion;     // 份量信息
+    
+    // 新增属性
+    private String[] allergens;       // 过敏原（如花生、海鲜、乳制品等）
+    private String[] religiousRestrictions; // 宗教限制（如猪肉、牛肉、海鲜等）
+    private String[] flavorProfiles;  // 口味特性（如甜、咸、辣、酸等）
+    private String[] cookingMethods;  // 烹饪方式（如煎、炒、蒸、炖等）
+    private int spicyLevel;           // 辣度等级（0-5，0表示不辣）
 
     /**
      * 创建一个食物对象
@@ -21,6 +28,37 @@ public class Food {
         this.category = category;
         this.nutrition = nutrition;
         this.portion = portion;
+        this.allergens = new String[0];
+        this.religiousRestrictions = new String[0];
+        this.flavorProfiles = new String[0];
+        this.cookingMethods = new String[0];
+        this.spicyLevel = 0;
+    }
+    
+    /**
+     * 创建一个完整的食物对象（包含所有属性）
+     * @param name 食物名称
+     * @param category 食物类别
+     * @param nutrition 营养信息
+     * @param portion 份量信息
+     * @param allergens 过敏原
+     * @param religiousRestrictions 宗教限制
+     * @param flavorProfiles 口味特性
+     * @param cookingMethods 烹饪方式
+     * @param spicyLevel 辣度等级
+     */
+    public Food(String name, String category, Nutrition nutrition, Portion portion,
+               String[] allergens, String[] religiousRestrictions, 
+               String[] flavorProfiles, String[] cookingMethods, int spicyLevel) {
+        this.name = name;
+        this.category = category;
+        this.nutrition = nutrition;
+        this.portion = portion;
+        this.allergens = allergens != null ? allergens : new String[0];
+        this.religiousRestrictions = religiousRestrictions != null ? religiousRestrictions : new String[0];
+        this.flavorProfiles = flavorProfiles != null ? flavorProfiles : new String[0];
+        this.cookingMethods = cookingMethods != null ? cookingMethods : new String[0];
+        this.spicyLevel = spicyLevel;
     }
 
     /**
@@ -56,7 +94,8 @@ public class Food {
         }
         
         // 返回新的食物对象，使用相同的名称、类别和营养信息，但有新的份量
-        return new Food(name, category, nutrition, newPortion);
+        return new Food(name, category, nutrition, newPortion, 
+                      allergens, religiousRestrictions, flavorProfiles, cookingMethods, spicyLevel);
     }
 
     /**
@@ -81,6 +120,12 @@ public class Food {
                 return new IntakeRange(100.0, 300.0, 200.0); // 乳制品100-300g，默认200g
             case "oil":          // 油脂
                 return new IntakeRange(5.0, 15.0, 10.0);     // 油脂5-15g，默认10g
+            case "pastry":       // 糕点
+                return new IntakeRange(25.0, 75.0, 50.0);    // 糕点25-75g，默认50g
+            case "mushroom":     // 蘑菇
+                return new IntakeRange(50.0, 100.0, 75.0);   // 蘑菇50-100g，默认75g
+            case "bean":         // 豆类
+                return new IntakeRange(50.0, 100.0, 75.0);   // 豆类50-100g，默认75g
             default:             // 默认
                 return new IntakeRange(25.0, 75.0, 50.0);    // 其他食物25-75g，默认50g
         }
@@ -140,11 +185,74 @@ public class Food {
         return portion.getDescription();
     }
 
+    /**
+     * 检查食物是否含有特定过敏原
+     * @param allergen 要检查的过敏原
+     * @return 如果含有该过敏原则返回true
+     */
+    public boolean containsAllergen(String allergen) {
+        for (String a : allergens) {
+            if (a.equalsIgnoreCase(allergen)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    /**
+     * 检查食物是否有特定宗教限制
+     * @param restriction 要检查的宗教限制
+     * @return 如果有该宗教限制则返回true
+     */
+    public boolean hasReligiousRestriction(String restriction) {
+        for (String r : religiousRestrictions) {
+            if (r.equalsIgnoreCase(restriction)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    /**
+     * 检查食物是否具有特定口味特性
+     * @param flavor 要检查的口味特性
+     * @return 如果具有该口味特性则返回true
+     */
+    public boolean hasFlavorProfile(String flavor) {
+        for (String f : flavorProfiles) {
+            if (f.equalsIgnoreCase(flavor)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    /**
+     * 检查食物是否使用特定烹饪方式
+     * @param method 要检查的烹饪方式
+     * @return 如果使用该烹饪方式则返回true
+     */
+    public boolean usesCookingMethod(String method) {
+        for (String m : cookingMethods) {
+            if (m.equalsIgnoreCase(method)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     // Getters
     public String getName() { return name; }
     public String getCategory() { return category; }
     public Nutrition getNutrition() { return nutrition; }
     public Portion getPortion() { return portion; }
+    
+    // Getters for new fields
+    public String[] getAllergens() { return allergens; }
+    public String[] getReligiousRestrictions() { return religiousRestrictions; }
+    public String[] getFlavorProfiles() { return flavorProfiles; }
+    public String[] getCookingMethods() { return cookingMethods; }
+    public int getSpicyLevel() { return spicyLevel; }
     
     // 便捷方法，直接获取营养成分
     public double getCarbohydrates() { return getActualNutrition().getCarbohydrates(); }

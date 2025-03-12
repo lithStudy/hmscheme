@@ -155,7 +155,14 @@ public class NutritionData {
                 category = "milk";
             }else if(category.equals("油脂類")){
                 category = "oil";
-            }else if(category.equals("其他")){
+            }else if(category.equals("糕餅點心類")){
+                category = "pastry";
+            }else if(category.equals("菇類")){
+                category = "mushroom";
+            }else if(category.equals("豆類")){
+                category = "bean";
+            }
+            else if(category.equals("其他")){
                 category = "other";
             }
             
