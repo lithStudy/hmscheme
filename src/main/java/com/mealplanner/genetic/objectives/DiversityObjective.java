@@ -17,13 +17,13 @@ public class DiversityObjective {
     private double weight;
     
     // 类别多样性权重
-    private double categoryWeight = 0.5;
+    private double categoryWeight = 0.3;
     
     // 食物特性多样性权重
     private double attributeWeight = 0.3;
     
     // 摄入量均衡权重
-    private double intakeWeight = 0.2;
+    private double intakeWeight = 0.4;
     
     // 理想的类别分布
     private Map<String, Double> idealCategoryDistribution;

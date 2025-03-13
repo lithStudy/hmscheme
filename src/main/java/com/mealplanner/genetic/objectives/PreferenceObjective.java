@@ -1,10 +1,10 @@
 package com.mealplanner.genetic.objectives;
 
-import com.mealplanner.Food;
-import com.mealplanner.UserProfile;
 import com.mealplanner.genetic.model.FoodGene;
 import com.mealplanner.genetic.model.MealSolution;
 import com.mealplanner.genetic.model.ObjectiveValue;
+import com.mealplanner.model.Food;
+import com.mealplanner.model.UserProfile;
 
 import java.util.List;
 

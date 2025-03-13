@@ -1,4 +1,4 @@
-package com.mealplanner;
+package com.mealplanner.model;
 
 public class UserProfile {
     private double weight;      // 体重(kg)

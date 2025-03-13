@@ -3,9 +3,8 @@ package com.mealplanner.foodmanage;
 import com.alibaba.excel.EasyExcel;
 import com.alibaba.excel.context.AnalysisContext;
 import com.alibaba.excel.event.AnalysisEventListener;
-import com.mealplanner.Food;
-import com.mealplanner.Nutrition;
-import com.mealplanner.Portion;
+
+import com.mealplanner.model.Food;
 
 import java.io.*;
 import java.util.ArrayList;

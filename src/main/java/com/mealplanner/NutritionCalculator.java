@@ -3,6 +3,10 @@ package com.mealplanner;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+
+import com.mealplanner.model.Nutrition;
+import com.mealplanner.model.UserProfile;
+
 import java.util.HashSet;
 
 public class NutritionCalculator {
@@ -174,7 +178,7 @@ public class NutritionCalculator {
     }
 
     // 计算每日营养需求
-    public MealNutrients calculateDailyNutrientNeeds() {
+    public Nutrition calculateDailyNutrientNeeds() {
         double tdee = userProfile.calculateTDEE();
         NutrientRatio ratio = calculateNutrientRatio();
 
@@ -189,7 +193,7 @@ public class NutritionCalculator {
         double calciumMg = 1000.0;  // 默认钙摄入
         double magnesiumMg = userProfile.getGender().equalsIgnoreCase("male") ? 400.0 : 310.0;  // 镁：性别相关
 
-        return new MealNutrients(tdee, carbsGrams, proteinGrams, fatGrams,
+        return new Nutrition(tdee,carbsGrams, proteinGrams, fatGrams,
                                     calciumMg, potassiumMg, sodiumMg, magnesiumMg);
     }
 }
@@ -260,7 +264,7 @@ class NutrientLimit {
 }
 
 // 每日营养需求类
-// public static class MealNutrients {
+// public static class Nutrition {
 //     private double totalCalories;  // 总热量(kcal)
 //     private double carbohydrates;  // 碳水化合物(g)
 //     private double protein;        // 蛋白质(g)
@@ -270,7 +274,7 @@ class NutrientLimit {
 //     private double sodium;         // 钠(mg)
 //     private double magnesium;      // 镁(mg)
 
-//     public MealNutrients(double totalCalories, double carbohydrates, 
+//     public Nutrition(double totalCalories, double carbohydrates, 
 //                              double protein, double fat, double calcium,
 //                              double potassium, double sodium, double magnesium) {
 //         this.totalCalories = totalCalories;

@@ -1,6 +1,6 @@
 package com.mealplanner.genetic.model;
 
-import com.mealplanner.Food;
+import com.mealplanner.model.Food;
 
 /**
  * 表示膳食解决方案中的食物基因

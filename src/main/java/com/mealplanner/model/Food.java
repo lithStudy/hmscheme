@@ -1,4 +1,4 @@
-package com.mealplanner;
+package com.mealplanner.model;
 
 /**
  * 食物类，表示一种食物及其营养和份量信息
@@ -136,7 +136,7 @@ public class Food {
      * @param targetNutrients 目标营养素需求
      * @return 最佳摄入量(g)
      */
-    public double calculateOptimalIntake(MealNutrients targetNutrients) {
+    public double calculateOptimalIntake(Nutrition targetNutrients) {
         IntakeRange range = getRecommendedIntakeRange();
         double optimalIntake = range.getDefaultIntake();
 

@@ -1,4 +1,4 @@
-package com.mealplanner;
+package com.mealplanner.model;
 
 /**
  * 营养素目标类，存储营养素的目标范围和评分参数

@@ -1,18 +1,17 @@
 package com.mealplanner.genetic;
 
-import com.mealplanner.MealNutrients;
-import com.mealplanner.Food;
-import com.mealplanner.MealNutrients;
-import com.mealplanner.MealPlanner;
+
 import com.mealplanner.NutritionCalculator;
-import com.mealplanner.UserProfile;
 import com.mealplanner.foodmanage.NutritionDataParser;
 import com.mealplanner.genetic.algorithm.NSGAIIMealPlanner;
 import com.mealplanner.genetic.model.FoodGene;
 import com.mealplanner.genetic.model.MealSolution;
 import com.mealplanner.genetic.model.ObjectiveValue;
 import com.mealplanner.genetic.util.NSGAIIConfiguration;
-import com.mealplanner.genetic.util.NSGAIILogger;
+import com.mealplanner.genetic.util.NutrientObjectiveConfig;
+import com.mealplanner.model.Food;
+import com.mealplanner.model.Nutrition;
+import com.mealplanner.model.UserProfile;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -43,75 +42,17 @@ public class GeneticMealPlannerDemo {
         // 创建算法配置
         NSGAIIConfiguration config = selectConfiguration();
         
-        // 设置目标营养素
-        // MealNutrients targetNutrients = createTargetNutrients();
         // 为每餐分配营养需求
         NutritionCalculator nutritionCalculator = new NutritionCalculator(userProfile);
-        MealNutrients dailyNeeds = nutritionCalculator.calculateDailyNutrientNeeds();
-        // MealNutrients breakfastNeeds = calculateMealNutrients(dailyNeeds, MEAL_RATIO_BREAKFAST);
-        // MealNutrients lunchNeeds = calculateMealNutrients(dailyNeeds, MEAL_RATIO_LUNCH);
-        MealPlanner mealPlanner = new MealPlanner(userProfile);
-        MealNutrients targetNutrients = mealPlanner.calculateMealNutrients(dailyNeeds, mealPlanner.MEAL_RATIO_DINNER);
+        Nutrition dailyNeeds = nutritionCalculator.calculateDailyNutrientNeeds();
+        //一餐的目标摄入量
+        Nutrition targetNutrients=dailyNeeds.scale(0.35);
         
         // 创建NSGA-II膳食规划器
         NSGAIIMealPlanner planner = new NSGAIIMealPlanner(config, foodDatabase, userProfile);
-        
-        // 设置最低营养素达成率
-        Scanner scanner = new Scanner(System.in);
-        System.out.println("\n设置营养素达成率范围");
-        System.out.println("--------------------");
-        System.out.println("营养素达成率表示实际摄入量与目标量的比值，应该控制在一个合理范围内。");
-        
-        // 设置最低达成率
-        System.out.print("最低达成率（默认：0.7）：");
-        String minRateStr = scanner.nextLine().trim();
-        double minRate = 0.7;
-        
-        try {
-            if (!minRateStr.isEmpty()) {
-                minRate = Double.parseDouble(minRateStr);
-                if (minRate >= 0 && minRate <= 1) {
-                    planner.setMinNutrientAchievementRate(minRate);
-                    System.out.println("已设置最低营养素达成率为：" + minRate);
-                } else {
-                    System.out.println("输入超出范围，使用默认值：0.7");
-                    minRate = 0.7;
-                }
-            } else {
-                System.out.println("使用默认最低营养素达成率：0.7");
-            }
-        } catch (NumberFormatException e) {
-            System.out.println("输入格式错误，使用默认值：0.7");
-        }
-        
-        // 设置最高达成率
-        System.out.print("最高达成率（默认：1.3）：");
-        String maxRateStr = scanner.nextLine().trim();
-        double maxRate = 1.3;
-        
-        try {
-            if (!maxRateStr.isEmpty()) {
-                maxRate = Double.parseDouble(maxRateStr);
-                if (maxRate > 1.0) {
-                    planner.setMaxNutrientAchievementRate(maxRate);
-                    System.out.println("已设置最高营养素达成率为：" + maxRate);
-                } else {
-                    System.out.println("输入必须大于1.0，使用默认值：1.3");
-                    maxRate = 1.3;
-                }
-            } else {
-                System.out.println("使用默认最高营养素达成率：1.3");
-            }
-        } catch (NumberFormatException e) {
-            System.out.println("输入格式错误，使用默认值：1.3");
-        }
-        
-        // 确保最高达成率大于最低达成率
-        if (maxRate <= minRate) {
-            System.out.println("警告：最高达成率必须大于最低达成率，自动调整为 " + (minRate + 0.3));
-            maxRate = minRate + 0.3;
-            planner.setMaxNutrientAchievementRate(maxRate);
-        }
+
+        // 配置营养素达成率范围，考虑用户的健康状况
+        NutrientObjectiveConfig.configureNutrientAchievementRates(planner, userProfile);
         
         // 执行算法
         System.out.println("\n开始执行NSGA-II多目标遗传算法...");
@@ -147,63 +88,68 @@ public class GeneticMealPlannerDemo {
      * @return 用户档案
      */
     private static UserProfile createUserProfile() {
-        Scanner scanner = new Scanner(System.in);
-        
-        System.out.println("\n创建用户档案");
-        System.out.println("--------------------");
-        
-        System.out.print("姓名（默认：测试用户）：");
-        String name = scanner.nextLine().trim();
-        if (name.isEmpty()) name = "测试用户";
-        
-        System.out.print("性别（M/F）（默认：M）：");
-        String gender = scanner.nextLine().trim().toUpperCase();
-        if (!gender.equals("M") && !gender.equals("F")) gender = "M";
-        
-        System.out.print("年龄（默认：30）：");
-        String ageStr = scanner.nextLine().trim();
+        //默认用户信息
+        String name = "测试用户";
+        String gender = "M";
         int age = 30;
-        if (!ageStr.isEmpty()) {
-            try {
-                age = Integer.parseInt(ageStr);
-            } catch (NumberFormatException e) {
-                System.out.println("使用默认年龄：30");
-            }
-        }
-        
-        System.out.print("身高(cm)（默认：170）：");
-        String heightStr = scanner.nextLine().trim();
         int height = 170;
-        if (!heightStr.isEmpty()) {
-            try {
-                height = Integer.parseInt(heightStr);
-            } catch (NumberFormatException e) {
-                System.out.println("使用默认身高：170cm");
-            }
-        }
-        
-        System.out.print("体重(kg)（默认：65）：");
-        String weightStr = scanner.nextLine().trim();
         int weight = 65;
-        if (!weightStr.isEmpty()) {
-            try {
-                weight = Integer.parseInt(weightStr);
-            } catch (NumberFormatException e) {
-                System.out.println("使用默认体重：65kg");
-            }
-        }
+        double activity = 1.55;
         
-        System.out.print("活动水平（1-5，1=久坐，5=高强度）（默认：3）：");
-        String activityStr = scanner.nextLine().trim();
-        int activity = 3;
-        if (!activityStr.isEmpty()) {
-            try {
-                activity = Integer.parseInt(activityStr);
-                if (activity < 1 || activity > 5) activity = 3;
-            } catch (NumberFormatException e) {
-                System.out.println("使用默认活动水平：3");
-            }
-        }
+        // // 获取用户输入 
+        // Scanner scanner = new Scanner(System.in);
+        
+        // System.out.println("\n创建用户档案");
+        // System.out.println("--------------------");
+        
+        // System.out.print("姓名（默认：测试用户）：");
+        // name = scanner.nextLine().trim();
+        // if (name.isEmpty()) name = "测试用户";
+        
+        // System.out.print("性别（M/F）（默认：M）：");
+        // gender = scanner.nextLine().trim().toUpperCase();
+        // if (!gender.equals("M") && !gender.equals("F")) gender = "M";
+        
+        // System.out.print("年龄（默认：30）：");
+        // String ageStr = scanner.nextLine().trim();
+        // if (!ageStr.isEmpty()) {
+        //     try {
+        //         age = Integer.parseInt(ageStr);
+        //     } catch (NumberFormatException e) {
+        //         System.out.println("使用默认年龄：30");
+        //     }
+        // }
+        
+        // System.out.print("身高(cm)（默认：170）：");
+        // String heightStr = scanner.nextLine().trim();
+        // if (!heightStr.isEmpty()) {
+        //     try {
+        //         height = Integer.parseInt(heightStr);
+        //     } catch (NumberFormatException e) {
+        //         System.out.println("使用默认身高：170cm");
+        //     }
+        // }
+        
+        // System.out.print("体重(kg)（默认：65）：");
+        // String weightStr = scanner.nextLine().trim();
+        // if (!weightStr.isEmpty()) {
+        //     try {
+        //         weight = Integer.parseInt(weightStr);
+        //     } catch (NumberFormatException e) {
+        //         System.out.println("使用默认体重：65kg");
+        //     }
+        // }
+        
+        // System.out.print("活动水平（1-5，1=久坐，5=高强度）（默认：3）：");
+        // String activityStr = scanner.nextLine().trim();
+        // if (!activityStr.isEmpty()) {
+        //     try {
+        //         activity = Integer.parseInt(activityStr);
+        //         if (activity < 1 || activity > 5) activity = 3;
+        //     } catch (NumberFormatException e) {
+        //         System.out.println("使用默认活动水平：3");
+        //     }
+        // }
         
         System.out.println("\n您的用户档案已创建：");
         System.out.println("姓名：" + name);
@@ -211,7 +157,7 @@ public class GeneticMealPlannerDemo {
         System.out.println("年龄：" + age);
         System.out.println("身高：" + height + "cm");
         System.out.println("体重：" + weight + "kg");
-        System.out.println("活动水平：" + activity);
+        System.out.println("活动水平系数：" + activity);
         
         return new UserProfile(weight, height,age,gender, activity,new String[]{"hypertension", "diabetes"});
 
@@ -229,21 +175,23 @@ public class GeneticMealPlannerDemo {
         System.out.println("1. 小型配置（速度快，质量较低）");
         System.out.println("2. 标准配置（速度和质量平衡）");
         System.out.println("3. 大型配置（速度慢，质量高）");
-        System.out.print("请选择（默认：2）：");
+        System.out.print("请选择（默认：3）：");
         
-        String choice = scanner.nextLine().trim();
+        //默认选择大型配置  
+        String choice = "3";
+        // String choice = scanner.nextLine().trim();
         
         switch (choice) {
             case "1":
                 System.out.println("已选择小型配置");
                 return NSGAIIConfiguration.createSmallConfiguration();
-            case "3":
-                System.out.println("已选择大型配置");
-                return NSGAIIConfiguration.createLargeConfiguration();
             case "2":
-            default:
                 System.out.println("已选择标准配置");
                 return NSGAIIConfiguration.createStandardConfiguration();
+            case "3":
+            default:
+                System.out.println("已选择大型配置");
+                return NSGAIIConfiguration.createLargeConfiguration();
         }
     }
     
@@ -251,7 +199,7 @@ public class GeneticMealPlannerDemo {
      * 创建目标营养素
      * @return 目标营养素
      */
-    private static MealNutrients createTargetNutrients() {
+    private static Nutrition createTargetNutrients() {
         Scanner scanner = new Scanner(System.in);
         
         System.out.println("\n设置目标营养素（针对一餐）");
@@ -318,7 +266,7 @@ public class GeneticMealPlannerDemo {
         System.out.println("钠：" + sodium + " mg");
         System.out.println("镁：" + magnesium + " mg");
         
-        return new MealNutrients(calories, carbs, protein, fat, calcium, potassium, sodium, magnesium);
+        return new Nutrition(calories, carbs, protein, fat, calcium, potassium, sodium, magnesium);
     }
     
     /**
@@ -327,7 +275,7 @@ public class GeneticMealPlannerDemo {
      * @param targetNutrients 目标营养素
      * @param planner 膳食规划器
      */
-    private static void displayResults(List<MealSolution> solutions, MealNutrients targetNutrients, NSGAIIMealPlanner planner) {
+    private static void displayResults(List<MealSolution> solutions, Nutrition targetNutrients, NSGAIIMealPlanner planner) {
         System.out.println("\n算法执行完成");
         System.out.println("====================================");
         System.out.println("找到 " + solutions.size() + " 个帕累托最优解");
@@ -352,10 +300,15 @@ public class GeneticMealPlannerDemo {
      * @param targetNutrients 目标营养素
      * @param planner 膳食规划器
      */
-    private static void displaySolutionSummary(MealSolution solution, MealNutrients targetNutrients, NSGAIIMealPlanner planner) {
+    private static void displaySolutionSummary(MealSolution solution, Nutrition targetNutrients, NSGAIIMealPlanner planner) {
         // 获取营养素达成率阈值
-        double minRate = planner.getMinNutrientAchievementRate() * 100; // 转换为百分比
-        double maxRate = planner.getMaxNutrientAchievementRate() * 100; // 转换为百分比
+        // double minRate = planner.getMinNutrientAchievementRate() * 100; // 转换为百分比
+        // double maxRate = planner.getMaxNutrientAchievementRate() * 100; // 转换为百分比
+        
+        // 计算并显示平均营养素达成率得分
+        double nutrientScore = planner.calculateSolutionNutrientScore(solution, targetNutrients);
+        System.out.println("平均营养素达成率得分: " + String.format("%.2f", nutrientScore) + 
+                         " (" + String.format("%.1f", nutrientScore * 100) + "%)");
         
         // 显示食物列表
         System.out.println("食物列表：");
@@ -366,71 +319,81 @@ public class GeneticMealPlannerDemo {
         }
         
         // 显示营养素总值和目标比较
-        MealNutrients actualNutrients = solution.calculateTotalNutrients();
+        Nutrition actualNutrients = solution.calculateTotalNutrients();
         System.out.println("\n营养素比较 (实际 / 目标)：");
         
         // 计算并展示所有营养素的达成率
-        double caloriesAchievement = actualNutrients.calories / targetNutrients.calories * 100;
-        double carbsAchievement = actualNutrients.carbohydrates / targetNutrients.carbohydrates * 100;
-        double proteinAchievement = actualNutrients.protein / targetNutrients.protein * 100;
-        double fatAchievement = actualNutrients.fat / targetNutrients.fat * 100;
-        double calciumAchievement = actualNutrients.calcium / targetNutrients.calcium * 100;
-        double potassiumAchievement = actualNutrients.potassium / targetNutrients.potassium * 100;
-        double sodiumAchievement = actualNutrients.sodium / targetNutrients.sodium * 100;
-        double magnesiumAchievement = actualNutrients.magnesium / targetNutrients.magnesium * 100;
+        double caloriesAchievement = actualNutrients.getCalories() / targetNutrients.getCalories() * 100;
+        double carbsAchievement = actualNutrients.getCarbohydrates() / targetNutrients.getCarbohydrates() * 100;
+        double proteinAchievement = actualNutrients.getProtein() / targetNutrients.getProtein() * 100;
+        double fatAchievement = actualNutrients.getFat() / targetNutrients.getFat() * 100;
+        double calciumAchievement = actualNutrients.getCalcium() / targetNutrients.getCalcium() * 100;
+        double potassiumAchievement = actualNutrients.getPotassium() / targetNutrients.getPotassium() * 100;
+        double sodiumAchievement = actualNutrients.getSodium() / targetNutrients.getSodium() * 100;
+        double magnesiumAchievement = actualNutrients.getMagnesium() / targetNutrients.getMagnesium() * 100;
+        
+        // 获取各营养素的达成率范围
+        double[] caloriesRange = planner.getNutrientAchievementRate("calories");
+        double[] carbsRange = planner.getNutrientAchievementRate("carbohydrates");
+        double[] proteinRange = planner.getNutrientAchievementRate("protein");
+        double[] fatRange = planner.getNutrientAchievementRate("fat");
+        double[] calciumRange = planner.getNutrientAchievementRate("calcium");
+        double[] potassiumRange = planner.getNutrientAchievementRate("potassium");
+        double[] sodiumRange = planner.getNutrientAchievementRate("sodium");
+        double[] magnesiumRange = planner.getNutrientAchievementRate("magnesium");
         
         // 热量
-        System.out.println("  热量: " + String.format("%.1f", actualNutrients.calories) + 
-                         " / " + String.format("%.1f", targetNutrients.calories) + " kcal, " +
+        System.out.println("  热量: " + String.format("%.1f", actualNutrients.getCalories()) + 
+                         " / " + String.format("%.1f", targetNutrients.getCalories()) + " kcal, " +
                          "达成率: " + String.format("%.1f%%", caloriesAchievement) + 
-                         formatAchievementStatus(caloriesAchievement, minRate, maxRate));
+                         formatAchievementStatus(caloriesAchievement, caloriesRange[0] * 100, caloriesRange[1] * 100));
         
-        // 碳水
-        System.out.println("  碳水: " + String.format("%.1f", actualNutrients.carbohydrates) + 
-                         " / " + String.format("%.1f", targetNutrients.carbohydrates) + " g, " +
+        // 碳水化合物
+        System.out.println("  碳水: " + String.format("%.1f", actualNutrients.getCarbohydrates()) + 
+                         " / " + String.format("%.1f", targetNutrients.getCarbohydrates()) + " g, " +
                          "达成率: " + String.format("%.1f%%", carbsAchievement) + 
-                         formatAchievementStatus(carbsAchievement, minRate, maxRate));
+                         formatAchievementStatus(carbsAchievement, carbsRange[0] * 100, carbsRange[1] * 100));
         
         // 蛋白质
-        System.out.println("  蛋白质: " + String.format("%.1f", actualNutrients.protein) + 
-                         " / " + String.format("%.1f", targetNutrients.protein) + " g, " +
+        System.out.println("  蛋白质: " + String.format("%.1f", actualNutrients.getProtein()) + 
+                         " / " + String.format("%.1f", targetNutrients.getProtein()) + " g, " +
                          "达成率: " + String.format("%.1f%%", proteinAchievement) + 
-                         formatAchievementStatus(proteinAchievement, minRate, maxRate));
+                         formatAchievementStatus(proteinAchievement, proteinRange[0] * 100, proteinRange[1] * 100));
         
         // 脂肪
-        System.out.println("  脂肪: " + String.format("%.1f", actualNutrients.fat) + 
-                         " / " + String.format("%.1f", targetNutrients.fat) + " g, " +
+        System.out.println("  脂肪: " + String.format("%.1f", actualNutrients.getFat()) + 
+                         " / " + String.format("%.1f", targetNutrients.getFat()) + " g, " +
                          "达成率: " + String.format("%.1f%%", fatAchievement) + 
-                         formatAchievementStatus(fatAchievement, minRate, maxRate));
+                         formatAchievementStatus(fatAchievement, fatRange[0] * 100, fatRange[1] * 100));
         
         // 钙
-        System.out.println("  钙: " + String.format("%.1f", actualNutrients.calcium) + 
-                         " / " + String.format("%.1f", targetNutrients.calcium) + " mg, " +
+        System.out.println("  钙: " + String.format("%.1f", actualNutrients.getCalcium()) + 
+                         " / " + String.format("%.1f", targetNutrients.getCalcium()) + " mg, " +
                          "达成率: " + String.format("%.1f%%", calciumAchievement) + 
-                         formatAchievementStatus(calciumAchievement, minRate, maxRate));
+                         formatAchievementStatus(calciumAchievement, calciumRange[0] * 100, calciumRange[1] * 100));
         
         // 钾
-        System.out.println("  钾: " + String.format("%.1f", actualNutrients.potassium) + 
-                         " / " + String.format("%.1f", targetNutrients.potassium) + " mg, " +
+        System.out.println("  钾: " + String.format("%.1f", actualNutrients.getPotassium()) + 
+                         " / " + String.format("%.1f", targetNutrients.getPotassium()) + " mg, " +
                          "达成率: " + String.format("%.1f%%", potassiumAchievement) + 
-                         formatAchievementStatus(potassiumAchievement, minRate, maxRate));
+                         formatAchievementStatus(potassiumAchievement, potassiumRange[0] * 100, potassiumRange[1] * 100));
         
         // 钠
-        System.out.println("  钠: " + String.format("%.1f", actualNutrients.sodium) + 
-                         " / " + String.format("%.1f", targetNutrients.sodium) + " mg, " +
+        System.out.println("  钠: " + String.format("%.1f", actualNutrients.getSodium()) + 
+                         " / " + String.format("%.1f", targetNutrients.getSodium()) + " mg, " +
                          "达成率: " + String.format("%.1f%%", sodiumAchievement) + 
-                         formatAchievementStatus(sodiumAchievement, minRate, maxRate));
+                         formatAchievementStatus(sodiumAchievement, sodiumRange[0] * 100, sodiumRange[1] * 100));
         
         // 镁
-        System.out.println("  镁: " + String.format("%.1f", actualNutrients.magnesium) + 
-                         " / " + String.format("%.1f", targetNutrients.magnesium) + " mg, " +
+        System.out.println("  镁: " + String.format("%.1f", actualNutrients.getMagnesium()) + 
+                         " / " + String.format("%.1f", targetNutrients.getMagnesium()) + " mg, " +
                          "达成率: " + String.format("%.1f%%", magnesiumAchievement) + 
-                         formatAchievementStatus(magnesiumAchievement, minRate, maxRate));
+                         formatAchievementStatus(magnesiumAchievement, magnesiumRange[0] * 100, magnesiumRange[1] * 100));
         
         // 计算三大营养素的热量比例
-        double carbsCalories = actualNutrients.carbohydrates * 4;
-        double proteinCalories = actualNutrients.protein * 4;
-        double fatCalories = actualNutrients.fat * 9;
+        double carbsCalories = actualNutrients.getCarbohydrates() * 4;
+        double proteinCalories = actualNutrients.getProtein() * 4;
+        double fatCalories = actualNutrients.getFat() * 9;
         double totalMacroCalories = carbsCalories + proteinCalories + fatCalories;
         
         if (totalMacroCalories > 0) {
@@ -480,7 +443,7 @@ public class GeneticMealPlannerDemo {
      * @param targetNutrients 目标营养素
      * @param planner 膳食规划器
      */
-    private static void interactiveResultsDisplay(List<MealSolution> solutions, MealNutrients targetNutrients, NSGAIIMealPlanner planner) {
+    private static void interactiveResultsDisplay(List<MealSolution> solutions, Nutrition targetNutrients, NSGAIIMealPlanner planner) {
         if (solutions.isEmpty()) {
             return;
         }

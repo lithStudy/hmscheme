@@ -1,8 +1,8 @@
 package com.mealplanner.genetic.objectives;
 
-import com.mealplanner.MealNutrients;
 import com.mealplanner.genetic.model.MealSolution;
 import com.mealplanner.genetic.model.ObjectiveValue;
+import com.mealplanner.model.Nutrition;
 
 /**
  * 营养素目标类，评估解决方案在特定营养素上的表现
@@ -18,7 +18,7 @@ public class NutrientObjective {
     private double weight;
     
     // 营养素评分方式（是否惩罚过量）
-    private boolean penalizeExcess;
+    private boolean penalizeExcess; 
     
     // 营养素偏差容忍度，降低偏差容忍度，使系统对营养素目标更加严格
     private double deviationTolerance = 0.1; // 默认允许10%的偏差
@@ -47,7 +47,7 @@ public class NutrientObjective {
      * @param targetNutrients 目标营养素
      * @return 目标值
      */
-    public ObjectiveValue evaluate(MealSolution solution, MealNutrients actualNutrients, MealNutrients targetNutrients) {
+    public ObjectiveValue evaluate(MealSolution solution, Nutrition actualNutrients, Nutrition targetNutrients) {
         double actualValue = getNutrientValue(actualNutrients);
         double targetValue = getNutrientValue(targetNutrients);
         
@@ -69,24 +69,24 @@ public class NutrientObjective {
      * @param nutrients 营养素对象
      * @return 营养素值
      */
-    private double getNutrientValue(MealNutrients nutrients) {
+    private double getNutrientValue(Nutrition nutrients) {
         switch (nutrientName.toLowerCase()) {
             case "calories":
-                return nutrients.calories;
+                return nutrients.getCalories();
             case "carbohydrates":
-                return nutrients.carbohydrates;
+                return nutrients.getCarbohydrates();
             case "protein":
-                return nutrients.protein;
+                return nutrients.getProtein();
             case "fat":
-                return nutrients.fat;
+                return nutrients.getFat();
             case "calcium":
-                return nutrients.calcium;
+                return nutrients.getCalcium();
             case "potassium":
-                return nutrients.potassium;
+                return nutrients.getPotassium();
             case "sodium":
-                return nutrients.sodium;
+                return nutrients.getSodium();
             case "magnesium":
-                return nutrients.magnesium;
+                return nutrients.getMagnesium();
             default:
                 return 0;
         }

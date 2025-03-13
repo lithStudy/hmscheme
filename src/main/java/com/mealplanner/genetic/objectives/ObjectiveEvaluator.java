@@ -1,10 +1,9 @@
 package com.mealplanner.genetic.objectives;
 
-import com.mealplanner.MealNutrients;
-import com.mealplanner.UserProfile;
+import com.mealplanner.model.UserProfile;
 import com.mealplanner.genetic.model.MealSolution;
 import com.mealplanner.genetic.model.ObjectiveValue;
-
+import com.mealplanner.model.Nutrition;
 import java.util.*;
 
 /**
@@ -179,11 +178,11 @@ public class ObjectiveEvaluator {
      * @param targetNutrients 目标营养素
      * @return 目标值列表
      */
-    public List<ObjectiveValue> evaluate(MealSolution solution, MealNutrients targetNutrients) {
+    public List<ObjectiveValue> evaluate(MealSolution solution, Nutrition targetNutrients) {
         List<ObjectiveValue> objectiveValues = new ArrayList<>();
         
         // 计算当前膳食的总营养素
-        MealNutrients actualNutrients = solution.calculateTotalNutrients();
+        Nutrition actualNutrients = solution.calculateTotalNutrients();
         
         // 评估营养素目标
         for (NutrientObjective objective : nutrientObjectives) {
@@ -202,7 +201,7 @@ public class ObjectiveEvaluator {
         objectiveValues.add(diversityValue);
         
         // 评估平衡目标
-        ObjectiveValue balanceValue = balanceObjective.evaluate(solution);
+        ObjectiveValue balanceValue = balanceObjective.evaluate(solution,targetNutrients);
         balanceValue.setWeight(balanceWeight);
         objectiveValues.add(balanceValue);
         

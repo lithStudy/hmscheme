@@ -95,7 +95,7 @@ public class NSGAIIConfiguration {
      */
     public static NSGAIIConfiguration createLargeConfiguration() {
         NSGAIIConfiguration config = new NSGAIIConfiguration();
-        config.setPopulationSize(200);
+        config.setPopulationSize(100);
         config.setMaxGenerations(200);
         config.setCrossoverRate(0.9);
         config.setMutationRate(0.3);

@@ -1,4 +1,4 @@
-package com.mealplanner;
+package com.mealplanner.model;
 
 /**
  * 食物份量类，存储食物的份量信息

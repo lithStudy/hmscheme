@@ -1,7 +1,7 @@
 package com.mealplanner.genetic.model;
 
-import com.mealplanner.Food;
-import com.mealplanner.MealNutrients;
+import com.mealplanner.model.Food;
+import com.mealplanner.model.Nutrition;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -23,7 +23,7 @@ public class MealSolution {
     private List<ObjectiveValue> objectiveValues;
     
     // 缓存的营养素总和，避免重复计算
-    private MealNutrients cachedTotalNutrients;
+    private Nutrition cachedTotalNutrients;
     
     /**
      * 构造函数
@@ -180,7 +180,7 @@ public class MealSolution {
      * 计算解决方案的总营养素
      * @return 总营养素
      */
-    public MealNutrients calculateTotalNutrients() {
+    public Nutrition calculateTotalNutrients() {
         // 如果已经计算过，直接返回缓存结果
         if (cachedTotalNutrients != null) {
             return cachedTotalNutrients;
@@ -210,7 +210,7 @@ public class MealSolution {
             totalMagnesium += food.getNutrition().getMagnesium() * ratio;
         }
         
-        cachedTotalNutrients = new MealNutrients(
+        cachedTotalNutrients = new Nutrition(
                 totalCalories,
                 totalCarbs,
                 totalProtein,

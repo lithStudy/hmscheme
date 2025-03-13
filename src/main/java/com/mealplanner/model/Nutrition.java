@@ -1,20 +1,24 @@
-package com.mealplanner;
+package com.mealplanner.model;
+
+import lombok.Getter;
 
 /**
  * 营养元素类，存储食物的营养成分信息
  */
+@Getter
 public class Nutrition {
-    private double carbohydrates; // 碳水化合物(g)
-    private double protein;       // 蛋白质(g)
-    private double fat;           // 脂肪(g)
-    private double calcium;       // 钙(mg)
-    private double potassium;     // 钾(mg)
-    private double sodium;        // 钠(mg)
-    private double magnesium;     // 镁(mg)
-    private double calories;      // 卡路里(kcal)
+    public double calories;      // 卡路里(kcal)
+    public double carbohydrates; // 碳水化合物(g)
+    public double protein;       // 蛋白质(g)
+    public double fat;           // 脂肪(g)
+    public double calcium;       // 钙(mg)
+    public double potassium;     // 钾(mg)
+    public double sodium;        // 钠(mg)
+    public double magnesium;     // 镁(mg)
 
-    public Nutrition(double carbohydrates, double protein, double fat,
+    public Nutrition(double calories, double carbohydrates, double protein, double fat,
                     double calcium, double potassium, double sodium, double magnesium) {
+        this.calories = calories;
         this.carbohydrates = carbohydrates;
         this.protein = protein;
         this.fat = fat;
@@ -37,6 +41,7 @@ public class Nutrition {
      */
     public Nutrition scale(double ratio) {
         return new Nutrition(
+            calories * ratio,
             carbohydrates * ratio,
             protein * ratio,
             fat * ratio,
@@ -54,6 +59,7 @@ public class Nutrition {
      */
     public Nutrition add(Nutrition other) {
         return new Nutrition(
+            this.calories + other.calories,
             this.carbohydrates + other.carbohydrates,
             this.protein + other.protein,
             this.fat + other.fat,
@@ -71,6 +77,7 @@ public class Nutrition {
      */
     public Nutrition subtract(Nutrition other) {
         return new Nutrition(
+            this.calories - other.calories,
             this.carbohydrates - other.carbohydrates,
             this.protein - other.protein,
             this.fat - other.fat,
@@ -81,13 +88,4 @@ public class Nutrition {
         );
     }
 
-    // Getters
-    public double getCarbohydrates() { return carbohydrates; }
-    public double getProtein() { return protein; }
-    public double getFat() { return fat; }
-    public double getCalcium() { return calcium; }
-    public double getPotassium() { return potassium; }
-    public double getSodium() { return sodium; }
-    public double getMagnesium() { return magnesium; }
-    public double getCalories() { return calories; }
 } 

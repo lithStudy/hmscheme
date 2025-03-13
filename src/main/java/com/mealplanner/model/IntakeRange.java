@@ -1,4 +1,4 @@
-package com.mealplanner;
+package com.mealplanner.model;
 
 /**
  * 食物摄入量范围类，定义食物的推荐摄入量范围

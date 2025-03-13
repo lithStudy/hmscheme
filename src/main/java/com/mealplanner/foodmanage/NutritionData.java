@@ -3,6 +3,10 @@ package com.mealplanner.foodmanage;
 import com.alibaba.excel.annotation.ExcelProperty;
 import lombok.Data;
 
+import com.mealplanner.model.Food;
+import com.mealplanner.model.Nutrition;
+import com.mealplanner.model.Portion;
+
 /**
  * 营养数据模型类，使用EasyExcel注解映射Excel列
  */
@@ -134,7 +138,7 @@ public class NutritionData {
      * 转换为Food对象
      * @return Food对象
      */
-    public com.mealplanner.Food toFood() {
+    public Food toFood() {
         try {
             // 解析基本信息
             String name = sampleName != null ? sampleName : "未知食物";
@@ -167,6 +171,7 @@ public class NutritionData {
             }
             
             // 解析营养成分
+            double caloriesValue = parseDouble(calories);
             double carbsValue = parseDouble(carbohydrates);
             double proteinValue = parseDouble(protein);
             double fatValue = parseDouble(fat);
@@ -176,15 +181,15 @@ public class NutritionData {
             double magnesiumValue = parseDouble(magnesium);
             
             // 创建营养对象
-            com.mealplanner.Nutrition nutrition = new com.mealplanner.Nutrition(
+            Nutrition nutrition = new Nutrition(caloriesValue,
                     carbsValue, proteinValue, fatValue, 
                     calciumValue, potassiumValue, sodiumValue, magnesiumValue);
             
             // 份量信息 - 假设标准份量为100克
-            com.mealplanner.Portion portion = new com.mealplanner.Portion(100.0, "克", 100.0);
+            Portion portion = new Portion(100.0, "克", 100.0);
             
             // 创建并返回Food对象
-            return new com.mealplanner.Food(name, category, nutrition, portion);
+            return new Food(name, category, nutrition, portion);
         } catch (Exception e) {
             System.err.println("转换数据失败: " + e.getMessage());
             return null;

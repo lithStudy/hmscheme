@@ -1,8 +1,9 @@
 package com.mealplanner.genetic.operators;
 
-import com.mealplanner.Food;
 import com.mealplanner.genetic.model.FoodGene;
 import com.mealplanner.genetic.model.MealSolution;
+import com.mealplanner.model.Food;
+import com.mealplanner.model.Nutrition;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -34,15 +35,18 @@ public class MealMutation {
     // 摄入量变异强度(0-1)
     private double intakeMutationStrength = 0.2;
     
-    // 目标营养素达成率范围
+    // 营养素达成率范围
     private double minNutrientAchievementRate = 0.8;
-    private double maxNutrientAchievementRate = 1.1;
+    private double maxNutrientAchievementRate = 1.2;
+    
+    // 不同营养素的达成率范围
+    private Map<String, double[]> nutrientAchievementRates = new HashMap<>();
     
     // 营养素权重，用于敏感度分析，默认都是1.0
     private Map<String, Double> nutrientWeights = new HashMap<>();
     
     // 当前目标营养素（可选）
-    private com.mealplanner.MealNutrients targetNutrients;
+    private Nutrition targetNutrients;
     
     /**
      * 构造函数
@@ -330,7 +334,7 @@ public class MealMutation {
         }
         
         // 计算当前膳食的总热量
-        double currentCalories = solution.calculateTotalNutrients().calories;
+        double currentCalories = solution.calculateTotalNutrients().getCalories();
         
         // 计算热量差额（正值表示需要增加热量，负值表示需要减少热量）
         double caloriesDifference = targetCalories - currentCalories;
@@ -421,13 +425,25 @@ public class MealMutation {
         }
         
         // 计算当前的营养素水平和目标达成率
-        // com.mealplanner.MealNutrients currentNutrients = solution.calculateTotalNutrients();
+        // com.mealplanner.Nutrition currentNutrients = solution.calculateTotalNutrients();
         Map<String, Double> nutrientRatios = calculateNutrientAchievementRatios(solution);
         
-        // 找出不达标的营养素（低于下限或高于上限）
-        Map<String, Double> problematicNutrients = findProblematicNutrients(nutrientRatios);
+        // 找出需要调整的营养素
+        List<String> deficientNutrients = new ArrayList<>();
+        List<String> excessiveNutrients = new ArrayList<>();
         
-        if (problematicNutrients.isEmpty()) {
+        for (Map.Entry<String, Double> entry : nutrientRatios.entrySet()) {
+            String nutrient = entry.getKey();
+            double ratio = entry.getValue();
+            
+            if (isDeficient(ratio, nutrient)) {
+                deficientNutrients.add(nutrient);
+            } else if (isExcessive(ratio, nutrient)) {
+                excessiveNutrients.add(nutrient);
+            }
+        }
+        
+        if (deficientNutrients.isEmpty() && excessiveNutrients.isEmpty()) {
             // 所有营养素都在达成率范围内，随机选择一种变异
             Random random = new Random();
             int choice = random.nextInt(3);
@@ -446,7 +462,7 @@ public class MealMutation {
         
         // 选择最适合调整的食材
         List<AdjustmentAction> adjustmentActions = determineAdjustmentActions(
-            genes, problematicNutrients, foodNutrientContributions);
+            genes, deficientNutrients, foodNutrientContributions);
         
         if (adjustmentActions.isEmpty()) {
             // 如果找不到合适的调整行动，尝试添加新食物
@@ -471,47 +487,47 @@ public class MealMutation {
      */
     private Map<String, Double> calculateNutrientAchievementRatios(MealSolution solution) {
         // 计算实际营养素
-        com.mealplanner.MealNutrients actualNutrients = solution.calculateTotalNutrients();
+        Nutrition actualNutrients = solution.calculateTotalNutrients();
         
         // 使用已设置的目标营养素，或者估计值
-        com.mealplanner.MealNutrients targetsToUse = targetNutrients != null ? 
+        Nutrition targetsToUse = targetNutrients != null ? 
                                                   targetNutrients : 
                                                   estimateTargetNutrients(actualNutrients);
         
         Map<String, Double> ratios = new HashMap<>();
         
         // 计算主要营养素的达成率
-        if (targetsToUse.calories > 0) {
-            ratios.put("calories", actualNutrients.calories / targetsToUse.calories);
+        if (targetsToUse.getCalories() > 0) {
+            ratios.put("calories", actualNutrients.getCalories() / targetsToUse.getCalories());
         }
         
-        if (targetsToUse.carbohydrates > 0) {
-            ratios.put("carbohydrates", actualNutrients.carbohydrates / targetsToUse.carbohydrates);
+        if (targetsToUse.getCarbohydrates() > 0) {
+            ratios.put("carbohydrates", actualNutrients.getCarbohydrates() / targetsToUse.getCarbohydrates());
         }
         
-        if (targetsToUse.protein > 0) {
-            ratios.put("protein", actualNutrients.protein / targetsToUse.protein);
+        if (targetsToUse.getProtein() > 0) {
+            ratios.put("protein", actualNutrients.getProtein() / targetsToUse.getProtein());
         }
         
-        if (targetsToUse.fat > 0) {
-            ratios.put("fat", actualNutrients.fat / targetsToUse.fat);
+        if (targetsToUse.getFat() > 0) {
+            ratios.put("fat", actualNutrients.getFat() / targetsToUse.getFat());
         }
         
         // 计算微量元素的达成率
-        if (targetsToUse.calcium > 0) {
-            ratios.put("calcium", actualNutrients.calcium / targetsToUse.calcium);
+        if (targetsToUse.getCalcium() > 0) {
+            ratios.put("calcium", actualNutrients.getCalcium() / targetsToUse.getCalcium());
         }
         
-        if (targetsToUse.potassium > 0) {
-            ratios.put("potassium", actualNutrients.potassium / targetsToUse.potassium);
+        if (targetsToUse.getPotassium() > 0) {
+            ratios.put("potassium", actualNutrients.getPotassium() / targetsToUse.getPotassium());
         }
         
-        if (targetsToUse.sodium > 0) {
-            ratios.put("sodium", actualNutrients.sodium / targetsToUse.sodium);
+        if (targetsToUse.getSodium() > 0) {
+            ratios.put("sodium", actualNutrients.getSodium() / targetsToUse.getSodium());
         }
         
-        if (targetsToUse.magnesium > 0) {
-            ratios.put("magnesium", actualNutrients.magnesium / targetsToUse.magnesium);
+        if (targetsToUse.getMagnesium() > 0) {
+            ratios.put("magnesium", actualNutrients.getMagnesium() / targetsToUse.getMagnesium());
         }
         
         return ratios;
@@ -522,40 +538,52 @@ public class MealMutation {
      * @param actualNutrients 当前营养素
      * @return 估计的目标营养素
      */
-    private com.mealplanner.MealNutrients estimateTargetNutrients(com.mealplanner.MealNutrients actualNutrients) {
+        private Nutrition estimateTargetNutrients(Nutrition actualNutrients) {
         // 这是一个简化的估计方法，实际情况应基于用户特征进行更复杂的计算
         // 假设当前营养素是目标的一个比例
-        return new com.mealplanner.MealNutrients(
-            actualNutrients.calories * 1.25,       // 假设目标热量是当前的1.25倍
-            actualNutrients.carbohydrates * 1.2,   // 碳水
-            actualNutrients.protein * 1.3,         // 蛋白质
-            actualNutrients.fat * 1.15,            // 脂肪
-            actualNutrients.calcium * 1.4,         // 钙
-            actualNutrients.potassium * 1.5,       // 钾
-            actualNutrients.sodium * 0.9,          // 钠（可能需要减少）
-            actualNutrients.magnesium * 1.4        // 镁
+        return new Nutrition(
+            actualNutrients.getCalories() * 1.25,       // 假设目标热量是当前的1.25倍
+            actualNutrients.getCarbohydrates() * 1.2,   // 碳水
+            actualNutrients.getProtein() * 1.3,         // 蛋白质
+            actualNutrients.getFat() * 1.15,            // 脂肪
+            actualNutrients.getCalcium() * 1.4,         // 钙
+            actualNutrients.getPotassium() * 1.5,       // 钾
+            actualNutrients.getSodium() * 0.9,          // 钠（可能需要减少）
+            actualNutrients.getMagnesium() * 1.4        // 镁
         );
     }
     
     /**
-     * 找出不在达成率范围内的营养素
-     * @param nutrientRatios 营养素达成率映射
-     * @return 不达标的营养素及其达成率
+     * 确定营养素是否需要调整
+     * @param ratio 当前达成率
+     * @param nutrientName 营养素名称
+     * @return 是否需要调整
      */
-    private Map<String, Double> findProblematicNutrients(Map<String, Double> nutrientRatios) {
-        Map<String, Double> problematic = new HashMap<>();
-        
-        for (Map.Entry<String, Double> entry : nutrientRatios.entrySet()) {
-            String nutrient = entry.getKey();
-            double ratio = entry.getValue();
-            
-            // 检查是否在达成率范围内
-            if (ratio < minNutrientAchievementRate || ratio > maxNutrientAchievementRate) {
-                problematic.put(nutrient, ratio);
-            }
-        }
-        
-        return problematic;
+    private boolean needsAdjustment(double ratio, String nutrientName) {
+        double[] range = getNutrientAchievementRate(nutrientName);
+        return ratio < range[0] || ratio > range[1];
+    }
+    
+    /**
+     * 确定营养素是否不足
+     * @param ratio 当前达成率
+     * @param nutrientName 营养素名称
+     * @return 是否不足
+     */
+    private boolean isDeficient(double ratio, String nutrientName) {
+        double[] range = getNutrientAchievementRate(nutrientName);
+        return ratio < range[0];
+    }
+    
+    /**
+     * 确定营养素是否过量
+     * @param ratio 当前达成率
+     * @param nutrientName 营养素名称
+     * @return 是否过量
+     */
+    private boolean isExcessive(double ratio, String nutrientName) {
+        double[] range = getNutrientAchievementRate(nutrientName);
+        return ratio > range[1];
     }
     
     /**
@@ -565,7 +593,7 @@ public class MealMutation {
      */
     private Map<FoodGene, Map<String, Double>> calculateFoodNutrientContributions(MealSolution solution) {
         List<FoodGene> genes = solution.getFoodGenes();
-        com.mealplanner.MealNutrients totalNutrients = solution.calculateTotalNutrients();
+        Nutrition totalNutrients = solution.calculateTotalNutrients();
         Map<FoodGene, Map<String, Double>> contributions = new HashMap<>();
         
         for (FoodGene gene : genes) {
@@ -575,42 +603,42 @@ public class MealMutation {
             
             // 计算该食材对各营养素的贡献比例
             // 热量贡献
-            double caloriesContrib = (food.getNutrition().getCalories() * intake / 100) / totalNutrients.calories;
+            double caloriesContrib = (food.getNutrition().getCalories() * intake / 100) / totalNutrients.getCalories();
             nutrientContributions.put("calories", caloriesContrib);
             
             // 碳水贡献
-            double carbsContrib = (food.getNutrition().getCarbohydrates() * intake / 100) / totalNutrients.carbohydrates;
+            double carbsContrib = (food.getNutrition().getCarbohydrates() * intake / 100) / totalNutrients.getCarbohydrates();
             nutrientContributions.put("carbohydrates", carbsContrib);
             
             // 蛋白质贡献
-            double proteinContrib = (food.getNutrition().getProtein() * intake / 100) / totalNutrients.protein;
+            double proteinContrib = (food.getNutrition().getProtein() * intake / 100) / totalNutrients.getProtein();
             nutrientContributions.put("protein", proteinContrib);
             
             // 脂肪贡献
-            double fatContrib = (food.getNutrition().getFat() * intake / 100) / totalNutrients.fat;
+            double fatContrib = (food.getNutrition().getFat() * intake / 100) / totalNutrients.getFat();
             nutrientContributions.put("fat", fatContrib);
             
             // 钙贡献
-            if (totalNutrients.calcium > 0) {
-                double calciumContrib = (food.getNutrition().getCalcium() * intake / 100) / totalNutrients.calcium;
+            if (totalNutrients.getCalcium() > 0) {
+                double calciumContrib = (food.getNutrition().getCalcium() * intake / 100) / totalNutrients.getCalcium();
                 nutrientContributions.put("calcium", calciumContrib);
             }
             
             // 钾贡献
-            if (totalNutrients.potassium > 0) {
-                double potassiumContrib = (food.getNutrition().getPotassium() * intake / 100) / totalNutrients.potassium;
+            if (totalNutrients.getPotassium() > 0) {
+                double potassiumContrib = (food.getNutrition().getPotassium() * intake / 100) / totalNutrients.getPotassium();
                 nutrientContributions.put("potassium", potassiumContrib);
             }
             
             // 钠贡献
-            if (totalNutrients.sodium > 0) {
-                double sodiumContrib = (food.getNutrition().getSodium() * intake / 100) / totalNutrients.sodium;
+            if (totalNutrients.getSodium() > 0) {
+                double sodiumContrib = (food.getNutrition().getSodium() * intake / 100) / totalNutrients.getSodium();
                 nutrientContributions.put("sodium", sodiumContrib);
             }
             
             // 镁贡献
-            if (totalNutrients.magnesium > 0) {
-                double magnesiumContrib = (food.getNutrition().getMagnesium() * intake / 100) / totalNutrients.magnesium;
+            if (totalNutrients.getMagnesium() > 0) {
+                double magnesiumContrib = (food.getNutrition().getMagnesium() * intake / 100) / totalNutrients.getMagnesium();
                 nutrientContributions.put("magnesium", magnesiumContrib);
             }
             
@@ -623,23 +651,19 @@ public class MealMutation {
     /**
      * 确定需要执行的调整行动
      * @param genes 食物基因列表
-     * @param problematicNutrients 不达标的营养素
+     * @param deficientNutrients 不足的营养素
      * @param foodContributions 食材营养素贡献度
      * @return 调整行动列表
      */
     private List<AdjustmentAction> determineAdjustmentActions(
             List<FoodGene> genes,
-            Map<String, Double> problematicNutrients,
+            List<String> deficientNutrients,
             Map<FoodGene, Map<String, Double>> foodContributions) {
         
         List<AdjustmentAction> actions = new ArrayList<>();
         
         // 对每个问题营养素，找出最适合调整的食材
-        for (Map.Entry<String, Double> entry : problematicNutrients.entrySet()) {
-            String nutrient = entry.getKey();
-            double currentRatio = entry.getValue();
-            boolean needIncrease = currentRatio < minNutrientAchievementRate;
-            
+        for (String nutrient : deficientNutrients) {
             // 根据食材对该营养素的贡献度排序，选择贡献最大的食材
             List<FoodGene> rankedGenes = rankGenesByNutrientContribution(genes, nutrient, foodContributions);
             
@@ -656,8 +680,8 @@ public class MealMutation {
                     double maxIntake = gene.getFood().getRecommendedIntakeRange().getMaxIntake();
                     
                     // 计算调整因子，基于达成率差距
-                    double targetRatio = needIncrease ? minNutrientAchievementRate : maxNutrientAchievementRate;
-                    double gap = Math.abs(currentRatio - targetRatio);
+                    double targetRatio = minNutrientAchievementRate;
+                    double gap = Math.abs(currentIntake - targetRatio);
                     double adjustmentFactor = calculateAdjustmentFactor(gap);
                     
                     // 根据营养素贡献度缩放调整因子
@@ -666,7 +690,7 @@ public class MealMutation {
                     
                     // 计算新的摄入量
                     double newIntake;
-                    if (needIncrease) {
+                    if (currentIntake < targetRatio) {
                         newIntake = currentIntake * (1 + adjustmentFactor);
                         newIntake = Math.min(maxIntake, newIntake); // 不超过最大推荐量
                     } else {
@@ -681,7 +705,6 @@ public class MealMutation {
                     if (Math.abs(newIntake - currentIntake) >= 5) {
                         actions.add(new AdjustmentAction(
                             gene, 
-                            needIncrease ? AdjustmentType.INCREASE : AdjustmentType.DECREASE,
                             newIntake,
                             nutrient
                         ));
@@ -743,29 +766,22 @@ public class MealMutation {
      * 应用调整行动
      * @param solution 膳食方案
      * @param action 调整行动
-     * @param requireStaple 是否需要保留主食
+     * @param requireStaple 是否要求包含主食
      * @return 是否成功应用
      */
     private boolean applyAdjustmentAction(MealSolution solution, AdjustmentAction action, boolean requireStaple) {
         FoodGene gene = action.getGene();
+        double newIntake = action.getNewIntake();
         
-        // 如果是减少操作且涉及唯一主食，需要检查
-        if (action.getType() == AdjustmentType.DECREASE && 
-            requireStaple && 
-            "staple".equals(gene.getFood().getCategory())) {
-            
-            boolean isOnlyStaple = solution.getFoodGenes().stream()
-                    .filter(g -> "staple".equals(g.getFood().getCategory()))
-                    .count() <= 1;
-            
-            if (isOnlyStaple) {
-                // 不减少唯一的主食，改为添加新食材
-                return mutateAddFood(solution);
-            }
+        // 应用新的摄入量
+        gene.setIntake(newIntake);
+        
+        // 检查调整后的解是否有效
+        if (!solution.isValid(requireStaple)) {
+            // 如果无效，恢复原来的摄入量
+            return false;
         }
         
-        // 设置新的摄入量
-        gene.setIntake(action.getNewIntake());
         return true;
     }
     
@@ -782,23 +798,17 @@ public class MealMutation {
      */
     private class AdjustmentAction {
         private FoodGene gene;              // 要调整的食材
-        private AdjustmentType type;        // 调整类型
         private double newIntake;           // 调整后的摄入量
         private String targetNutrient;      // 目标调整的营养素
         
-        public AdjustmentAction(FoodGene gene, AdjustmentType type, double newIntake, String targetNutrient) {
+        public AdjustmentAction(FoodGene gene, double newIntake, String targetNutrient) {
             this.gene = gene;
-            this.type = type;
             this.newIntake = newIntake;
             this.targetNutrient = targetNutrient;
         }
         
         public FoodGene getGene() {
             return gene;
-        }
-        
-        public AdjustmentType getType() {
-            return type;
         }
         
         public double getNewIntake() {
@@ -812,22 +822,34 @@ public class MealMutation {
     
     /**
      * 设置营养素达成率范围
-     * @param minRate 最低达成率（0-1之间）
-     * @param maxRate 最高达成率（大于1）
+     * @param minRate 最小达成率
+     * @param maxRate 最大达成率
      */
     public void setNutrientAchievementRateRange(double minRate, double maxRate) {
-        if (minRate < 0 || minRate > 1) {
-            throw new IllegalArgumentException("最低营养素达成率必须在0到1之间");
-        }
-        if (maxRate <= 1) {
-            throw new IllegalArgumentException("最高营养素达成率必须大于1");
-        }
         this.minNutrientAchievementRate = minRate;
         this.maxNutrientAchievementRate = maxRate;
     }
     
     /**
-     * 设置某个营养素的权重
+     * 设置不同营养素的达成率范围
+     * @param nutrientRates 营养素达成率范围映射
+     */
+    public void setNutrientAchievementRates(Map<String, double[]> nutrientRates) {
+        this.nutrientAchievementRates = nutrientRates;
+    }
+    
+    /**
+     * 获取特定营养素的达成率范围
+     * @param nutrientName 营养素名称
+     * @return 达成率范围数组 [最小达成率, 最大达成率]
+     */
+    public double[] getNutrientAchievementRate(String nutrientName) {
+        return nutrientAchievementRates.getOrDefault(nutrientName, 
+                new double[]{minNutrientAchievementRate, maxNutrientAchievementRate});
+    }
+    
+    /**
+     * 设置营养素权重
      * @param nutrient 营养素名称
      * @param weight 权重值
      */
@@ -899,7 +921,7 @@ public class MealMutation {
      * 设置目标营养素，用于更精确地计算达成率
      * @param targetNutrients 目标营养素
      */
-    public void setTargetNutrients(com.mealplanner.MealNutrients targetNutrients) {
+    public void setTargetNutrients(Nutrition targetNutrients) {
         this.targetNutrients = targetNutrients;
     }
     
@@ -907,7 +929,7 @@ public class MealMutation {
      * 获取当前设置的目标营养素
      * @return 目标营养素，如果未设置则返回null
      */
-    public com.mealplanner.MealNutrients getTargetNutrients() {
+    public Nutrition getTargetNutrients() {
         return this.targetNutrients;
     }
 }
