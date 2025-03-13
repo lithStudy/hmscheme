@@ -10,17 +10,12 @@ import java.util.*;
  * 多目标评价器，评估膳食解决方案在多个目标上的表现
  */
 public class ObjectiveEvaluator {
-    // 用户档案
-    private UserProfile userProfile;
-    
     // 各个目标
-    private List<NutrientObjective> nutrientObjectives;
+    private List<NutrientObjective> nutrientObjectives=new ArrayList<>();
     private PreferenceObjective preferenceObjective;
     private DiversityObjective diversityObjective;
     private BalanceObjective balanceObjective;
     
-    // 营养素目标权重
-    private Map<String, Double> nutrientWeights;
     
     // 其他目标权重
     private double preferenceWeight = 0.2;
@@ -35,59 +30,34 @@ public class ObjectiveEvaluator {
      * @param userProfile 用户档案
      */
     public ObjectiveEvaluator(UserProfile userProfile) {
-        this.userProfile = userProfile;
-        this.nutrientObjectives = new ArrayList<>();
+        // 初始化偏好目标评估器,用于评估食物是否符合用户偏好
         this.preferenceObjective = new PreferenceObjective(userProfile);
+        // 初始化多样性目标评估器,用于评估食物种类的多样性
         this.diversityObjective = new DiversityObjective();
+        // 初始化平衡性目标评估器,用于评估营养素的平衡性
         this.balanceObjective = new BalanceObjective();
-        
-        // 初始化营养素权重
-        initNutrientWeights();
-        
-        // 创建标准营养素目标
-        createStandardNutrientObjectives();
-        
-        // 根据用户健康状况调整权重
-        if (userProfile != null) {
-            adjustWeightsByHealthConditions(userProfile.getHealthConditions());
-        }
+        // 初始化营养元素评估器，用于评估每个营养元素成分的合理性
+        createStandardNutrientObjectives(userProfile);
     }
     
-    /**
-     * 初始化营养素权重
-     */
-    private void initNutrientWeights() {
-        nutrientWeights = new HashMap<>();
-        // 热量 - 主要营养素,提高权重，增强达成率
-        nutrientWeights.put("calories", 10.0);
-        // 碳水化合物 - 主要营养素,标准权重
-        nutrientWeights.put("carbohydrates", 1.0);
-        // 蛋白质 - 主要营养素,标准权重
-        nutrientWeights.put("protein", 1.0);
-        // 脂肪 - 主要营养素,标准权重
-        nutrientWeights.put("fat", 1.0);
-        // 钙质 - 次要营养素,较低权重
-        nutrientWeights.put("calcium", 0.7);
-        // 钾 - 次要营养素,较低权重
-        nutrientWeights.put("potassium", 0.7);
-        // 钠 - 需要适度控制,中等权重
-        nutrientWeights.put("sodium", 0.8);
-        // 镁 - 次要营养素,较低权重
-        nutrientWeights.put("magnesium", 0.7);
-    }
+    
     
     /**
      * 创建标准营养素目标
      */
-    private void createStandardNutrientObjectives() {
-        // 创建热量目标，使用更严格的参数
-        NutrientObjective caloriesObjective = new NutrientObjective("calories_objective", "calories", 
-                nutrientWeights.get("calories"), true);
-        // 设置热量更严格的偏差容忍度，只允许5%的偏差（从默认的10%降低）
-        caloriesObjective.setDeviationTolerance(0.05);
-        // 设置热量更高的硬约束阈值，要求至少90%的匹配度（从默认的80%提高）
-        caloriesObjective.setHardConstraintThreshold(0.9);
-        nutrientObjectives.add(caloriesObjective);
+    private void createStandardNutrientObjectives(UserProfile userProfile) {
+        // 初始化默认的营养素权重
+        Map<String, Double> nutrientWeights = initDefaultNutrientWeights();
+        // 根据用户健康状况调整权重
+        if (userProfile != null) {
+            changeNutrientWeightsByHealthConditions(userProfile.getHealthConditions(),nutrientWeights);
+        }
+        /**
+         * 初始化营养素目标
+         **/
+        // 热量目标，使用更严格的参数
+        nutrientObjectives.add(new NutrientObjective("calories_objective", "calories", 
+        nutrientWeights.get("calories"), true, 0.05, 0.9));
         
         nutrientObjectives.add(new NutrientObjective("carbohydrates_objective", "carbohydrates", 
                 nutrientWeights.get("carbohydrates"), true));
@@ -110,12 +80,35 @@ public class ObjectiveEvaluator {
         nutrientObjectives.add(new NutrientObjective("magnesium_objective", "magnesium", 
                 nutrientWeights.get("magnesium"), false));
     }
+    /**
+     * 初始化营养素权重
+     */
+    private Map<String, Double> initDefaultNutrientWeights() {
+        Map<String, Double> nutrientWeights = new HashMap<>();
+        // 热量 - 主要营养素,提高权重，增强达成率
+        nutrientWeights.put("calories", 3.0);
+        // 碳水化合物 - 主要营养素,标准权重
+        nutrientWeights.put("carbohydrates", 1.0);
+        // 蛋白质 - 主要营养素,标准权重
+        nutrientWeights.put("protein", 1.0);
+        // 脂肪 - 主要营养素,标准权重
+        nutrientWeights.put("fat", 0.8);
+        // 钙质 - 次要营养素,较低权重
+        nutrientWeights.put("calcium", 0.7);
+        // 钾 - 次要营养素,较低权重
+        nutrientWeights.put("potassium", 0.7);
+        // 钠 - 需要适度控制,中等权重
+        nutrientWeights.put("sodium", 0.8);
+        // 镁 - 次要营养素,较低权重
+        nutrientWeights.put("magnesium", 0.7);
+        return nutrientWeights;
+    }
     
     /**
      * 根据用户健康状况调整权重
      * @param healthConditions 健康状况数组
      */
-    private void adjustWeightsByHealthConditions(String[] healthConditions) {
+    private void changeNutrientWeightsByHealthConditions(String[] healthConditions, Map<String, Double> nutrientWeights) {
         if (healthConditions == null || healthConditions.length == 0) {
             return; // 没有特殊健康状况，使用默认权重
         }
@@ -163,13 +156,13 @@ public class ObjectiveEvaluator {
             }
         }
         
-        // 更新现有营养素目标的权重
-        for (NutrientObjective objective : nutrientObjectives) {
-            String nutrient = objective.getNutrientName();
-            if (nutrientWeights.containsKey(nutrient)) {
-                objective.setWeight(nutrientWeights.get(nutrient));
-            }
-        }
+        // // 更新现有营养素目标的权重
+        // for (NutrientObjective objective : nutrientObjectives) {
+        //     String nutrient = objective.getNutrientName();
+        //     if (nutrientWeights.containsKey(nutrient)) {
+        //         objective.setWeight(nutrientWeights.get(nutrient));
+        //     }
+        // }
     }
     
     /**
@@ -281,22 +274,6 @@ public class ObjectiveEvaluator {
         return balanceObjective;
     }
     
-    /**
-     * 设置营养素权重
-     * @param nutrient 营养素名称
-     * @param weight 权重
-     */
-    public void setNutrientWeight(String nutrient, double weight) {
-        nutrientWeights.put(nutrient, weight);
-        
-        // 更新对应目标的权重
-        for (NutrientObjective objective : nutrientObjectives) {
-            if (objective.getNutrientName().equals(nutrient)) {
-                objective.setWeight(weight);
-                break;
-            }
-        }
-    }
     
     /**
      * 设置用户偏好权重

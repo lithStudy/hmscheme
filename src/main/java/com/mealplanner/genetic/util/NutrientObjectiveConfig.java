@@ -91,11 +91,6 @@ public class NutrientObjectiveConfig {
         
         // 设置每个营养素的达成率范围
         planner.setNutrientAchievementRates(nutrientRates);
-        
-        // 为了向后兼容，也设置全局的最小和最大达成率
-        // 这些值将作为默认值，当特定营养素没有设置时使用
-        // planner.setMinNutrientAchievementRate(DEFAULT_MIN_RATE);
-        // planner.setMaxNutrientAchievementRate(DEFAULT_MAX_RATE);
     }
     
     /**

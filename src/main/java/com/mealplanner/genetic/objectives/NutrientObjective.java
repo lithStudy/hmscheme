@@ -39,6 +39,15 @@ public class NutrientObjective {
         this.weight = weight;
         this.penalizeExcess = penalizeExcess;
     }
+
+    public NutrientObjective(String name, String nutrientName, double weight, boolean penalizeExcess, double deviationTolerance, double hardConstraintThreshold) {
+        this.name = name;
+        this.nutrientName = nutrientName;
+        this.weight = weight;
+        this.penalizeExcess = penalizeExcess;
+        this.deviationTolerance = deviationTolerance;
+        this.hardConstraintThreshold = hardConstraintThreshold;
+    }
     
     /**
      * 评估解决方案在该营养素目标上的表现

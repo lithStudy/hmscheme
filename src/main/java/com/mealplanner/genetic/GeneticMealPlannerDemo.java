@@ -96,60 +96,6 @@ public class GeneticMealPlannerDemo {
         int weight = 65;
         double activity = 1.55;
         
-        // // 获取用户输入 
-        // Scanner scanner = new Scanner(System.in);
-        
-        // System.out.println("\n创建用户档案");
-        // System.out.println("--------------------");
-        
-        // System.out.print("姓名（默认：测试用户）：");
-        // name = scanner.nextLine().trim();
-        // if (name.isEmpty()) name = "测试用户";
-        
-        // System.out.print("性别（M/F）（默认：M）：");
-        // gender = scanner.nextLine().trim().toUpperCase();
-        // if (!gender.equals("M") && !gender.equals("F")) gender = "M";
-        
-        // System.out.print("年龄（默认：30）：");
-        // String ageStr = scanner.nextLine().trim();
-        // if (!ageStr.isEmpty()) {
-        //     try {
-        //         age = Integer.parseInt(ageStr);
-        //     } catch (NumberFormatException e) {
-        //         System.out.println("使用默认年龄：30");
-        //     }
-        // }
-        
-        // System.out.print("身高(cm)（默认：170）：");
-        // String heightStr = scanner.nextLine().trim();
-        // if (!heightStr.isEmpty()) {
-        //     try {
-        //         height = Integer.parseInt(heightStr);
-        //     } catch (NumberFormatException e) {
-        //         System.out.println("使用默认身高：170cm");
-        //     }
-        // }
-        
-        // System.out.print("体重(kg)（默认：65）：");
-        // String weightStr = scanner.nextLine().trim();
-        // if (!weightStr.isEmpty()) {
-        //     try {
-        //         weight = Integer.parseInt(weightStr);
-        //     } catch (NumberFormatException e) {
-        //         System.out.println("使用默认体重：65kg");
-        //     }
-        // }
-        
-        // System.out.print("活动水平（1-5，1=久坐，5=高强度）（默认：3）：");
-        // String activityStr = scanner.nextLine().trim();
-        // if (!activityStr.isEmpty()) {
-        //     try {
-        //         activity = Integer.parseInt(activityStr);
-        //         if (activity < 1 || activity > 5) activity = 3;
-        //     } catch (NumberFormatException e) {
-        //         System.out.println("使用默认活动水平：3");
-        //     }
-        // }
         
         System.out.println("\n您的用户档案已创建：");
         System.out.println("姓名：" + name);
@@ -168,18 +114,8 @@ public class GeneticMealPlannerDemo {
      * @return 算法配置
      */
     private static NSGAIIConfiguration selectConfiguration() {
-        Scanner scanner = new Scanner(System.in);
-        
-        System.out.println("\n选择算法配置");
-        System.out.println("--------------------");
-        System.out.println("1. 小型配置（速度快，质量较低）");
-        System.out.println("2. 标准配置（速度和质量平衡）");
-        System.out.println("3. 大型配置（速度慢，质量高）");
-        System.out.print("请选择（默认：3）：");
-        
         //默认选择大型配置  
         String choice = "3";
-        // String choice = scanner.nextLine().trim();
         
         switch (choice) {
             case "1":
@@ -193,80 +129,6 @@ public class GeneticMealPlannerDemo {
                 System.out.println("已选择大型配置");
                 return NSGAIIConfiguration.createLargeConfiguration();
         }
-    }
-    
-    /**
-     * 创建目标营养素
-     * @return 目标营养素
-     */
-    private static Nutrition createTargetNutrients() {
-        Scanner scanner = new Scanner(System.in);
-        
-        System.out.println("\n设置目标营养素（针对一餐）");
-        System.out.println("--------------------");
-        System.out.println("请按回车使用默认值，或输入新值");
-        
-        System.out.print("热量(kcal)（默认：600）：");
-        String caloriesStr = scanner.nextLine().trim();
-        double calories = 600;
-        if (!caloriesStr.isEmpty()) {
-            try {
-                calories = Double.parseDouble(caloriesStr);
-            } catch (NumberFormatException e) {
-                System.out.println("使用默认值：600kcal");
-            }
-        }
-        
-        System.out.print("碳水化合物(g)（默认：75）：");
-        String carbsStr = scanner.nextLine().trim();
-        double carbs = 75;
-        if (!carbsStr.isEmpty()) {
-            try {
-                carbs = Double.parseDouble(carbsStr);
-            } catch (NumberFormatException e) {
-                System.out.println("使用默认值：75g");
-            }
-        }
-        
-        System.out.print("蛋白质(g)（默认：25）：");
-        String proteinStr = scanner.nextLine().trim();
-        double protein = 25;
-        if (!proteinStr.isEmpty()) {
-            try {
-                protein = Double.parseDouble(proteinStr);
-            } catch (NumberFormatException e) {
-                System.out.println("使用默认值：25g");
-            }
-        }
-        
-        System.out.print("脂肪(g)（默认：20）：");
-        String fatStr = scanner.nextLine().trim();
-        double fat = 20;
-        if (!fatStr.isEmpty()) {
-            try {
-                fat = Double.parseDouble(fatStr);
-            } catch (NumberFormatException e) {
-                System.out.println("使用默认值：20g");
-            }
-        }
-        
-        // 微量元素使用默认值
-        double calcium = 300;    // 钙
-        double potassium = 1000; // 钾
-        double sodium = 800;     // 钠
-        double magnesium = 120;  // 镁
-        
-        System.out.println("\n目标营养素已设置：");
-        System.out.println("热量：" + calories + " kcal");
-        System.out.println("碳水化合物：" + carbs + " g");
-        System.out.println("蛋白质：" + protein + " g");
-        System.out.println("脂肪：" + fat + " g");
-        System.out.println("钙：" + calcium + " mg");
-        System.out.println("钾：" + potassium + " mg");
-        System.out.println("钠：" + sodium + " mg");
-        System.out.println("镁：" + magnesium + " mg");
-        
-        return new Nutrition(calories, carbs, protein, fat, calcium, potassium, sodium, magnesium);
     }
     
     /**
