@@ -17,13 +17,19 @@ public class DiversityObjective {
     private double weight;
     
     // 类别多样性权重
-    private double categoryWeight = 0.3;
+    private double categoryWeight = 0.5;
     
     // 食物特性多样性权重
-    private double attributeWeight = 0.3;
+    private double attributeWeight = 0.2;
     
-    // 摄入量均衡权重
-    private double intakeWeight = 0.4;
+    // 摄入量均衡权重：摄入量暂时不需要均衡
+    private double intakeWeight = 0;
+    
+    // 类别分布在类别多样性中的权重
+    private double categoryDistributionWeight = 0.8;
+    
+    // 类别覆盖率在类别多样性中的权重
+    private double categoryCoverageWeight = 0.2;
     
     // 理想的类别分布
     private Map<String, Double> idealCategoryDistribution;
@@ -119,15 +125,15 @@ public class DiversityObjective {
             for (String category : idealCategoryDistribution.keySet()) {
                 double ideal = idealCategoryDistribution.get(category);
                 double actual = actualDistribution.getOrDefault(category, 0.0);
-                // 使用 1 - 绝对差异 作为相似度
-                similarity += 1 - Math.min(1, Math.abs(ideal - actual) * 2);
+                // 使用 1 - 绝对差异 作为相似度，增加差异的惩罚力度
+                similarity += 1 - Math.min(1, Math.abs(ideal - actual) * 3); // 从2增加到3，增加惩罚力度
             }
             
             distributionScore = similarity / idealCategoryDistribution.size();
         }
         
         // 综合覆盖率和分布得分
-        return (coverageScore * 0.4 + distributionScore * 0.6);
+        return (coverageScore * categoryCoverageWeight + distributionScore * categoryDistributionWeight);
     }
     
     /**
@@ -303,5 +309,41 @@ public class DiversityObjective {
      */
     public Map<String, Double> getIdealCategoryDistribution() {
         return new HashMap<>(idealCategoryDistribution);
+    }
+    
+    /**
+     * 调整类别分布在多样性评分中的权重
+     * @param categoryDistributionWeight 类别分布权重（在类别多样性评分中的权重）
+     * @param categoryWeight 类别多样性在总体多样性评分中的权重
+     */
+    public void adjustCategoryDistributionWeight(double categoryDistributionWeight, double categoryWeight) {
+        if (categoryDistributionWeight < 0 || categoryDistributionWeight > 1) {
+            throw new IllegalArgumentException("类别分布权重必须在0到1之间");
+        }
+        if (categoryWeight < 0 || categoryWeight > 1) {
+            throw new IllegalArgumentException("类别多样性权重必须在0到1之间");
+        }
+        
+        // 设置类别分布在类别多样性评分中的权重
+        double coverageWeight = 1 - categoryDistributionWeight;
+        this.categoryDistributionWeight = categoryDistributionWeight;
+        this.categoryCoverageWeight = coverageWeight;
+        
+        // 修改类别多样性在总体多样性中的权重
+        this.categoryWeight = categoryWeight;
+        
+        // 确保所有权重总和不变
+        double remainingWeight = 1 - categoryWeight - intakeWeight;
+        if (remainingWeight < 0) {
+            throw new IllegalArgumentException("权重总和不能超过1");
+        }
+        this.attributeWeight = remainingWeight;
+        
+        System.out.println("已调整类别分布权重：");
+        System.out.println("- 类别分布在类别多样性中的权重: " + categoryDistributionWeight);
+        System.out.println("- 类别覆盖率在类别多样性中的权重: " + coverageWeight);
+        System.out.println("- 类别多样性在总体多样性中的权重: " + categoryWeight);
+        System.out.println("- 食物特性多样性在总体多样性中的权重: " + attributeWeight);
+        System.out.println("- 摄入量均衡在总体多样性中的权重: " + intakeWeight);
     }
 } 

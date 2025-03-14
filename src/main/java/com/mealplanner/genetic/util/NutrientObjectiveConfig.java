@@ -1,16 +1,14 @@
 package com.mealplanner.genetic.util;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import com.mealplanner.genetic.algorithm.NSGAIIMealPlanner;
 import com.mealplanner.model.UserProfile;
 
 public class NutrientObjectiveConfig {
-    // 默认营养素达成率范围
-    private static final double DEFAULT_MIN_RATE = 0.9;
-    private static final double DEFAULT_MAX_RATE = 1.1;
-    
     // 不同营养素的默认达成率范围
     private static final Map<String, double[]> DEFAULT_NUTRIENT_RATES = new HashMap<>();
     
@@ -74,35 +72,60 @@ public class NutrientObjectiveConfig {
      * @param planner NSGA-II膳食规划器
      * @param userProfile 用户档案（包含健康状况）
      */
-    public static void configureNutrientAchievementRates(NSGAIIMealPlanner planner, UserProfile userProfile) {
+    public static Map<String, double[]> configureNutrientAchievementRates( UserProfile userProfile) {
         // 创建营养素达成率映射
         Map<String, double[]> nutrientRates = new HashMap<>(DEFAULT_NUTRIENT_RATES);
         
         // 根据用户健康状况调整营养素达成率
         if (userProfile != null && userProfile.getHealthConditions() != null) {
+            // 创建一个临时映射，用于存储所有疾病对每个营养素的要求
+            Map<String, List<double[]>> allDiseaseRequirements = new HashMap<>();
+            
+            // 收集所有疾病对每个营养素的要求
             for (String condition : userProfile.getHealthConditions()) {
                 Map<String, double[]> diseaseRates = DISEASE_NUTRIENT_RATES.get(condition.toLowerCase());
                 if (diseaseRates != null) {
-                    // 将疾病特定的营养素达成率应用到总映射中
-                    nutrientRates.putAll(diseaseRates);
+                    for (Map.Entry<String, double[]> entry : diseaseRates.entrySet()) {
+                        String nutrient = entry.getKey();
+                        double[] range = entry.getValue();
+                        
+                        if (!allDiseaseRequirements.containsKey(nutrient)) {
+                            allDiseaseRequirements.put(nutrient, new ArrayList<>());
+                        }
+                        allDiseaseRequirements.get(nutrient).add(range);
+                    }
+                }
+            }
+            
+            // 对于每个营养素，综合考虑所有疾病的要求，取最严格的限制
+            for (Map.Entry<String, List<double[]>> entry : allDiseaseRequirements.entrySet()) {
+                String nutrient = entry.getKey();
+                List<double[]> ranges = entry.getValue();
+                
+                if (!ranges.isEmpty()) {
+                    // 初始化为第一个范围
+                    double minRate = ranges.get(0)[0];
+                    double maxRate = ranges.get(0)[1];
+                    
+                    // 比较所有范围，取最严格的限制
+                    for (int i = 1; i < ranges.size(); i++) {
+                        double[] range = ranges.get(i);
+                        minRate = Math.max(minRate, range[0]); // 对于下限，取最大值
+                        maxRate = Math.min(maxRate, range[1]); // 对于上限，取最小值
+                    }
+                    
+                    // 确保下限不大于上限
+                    if (minRate <= maxRate) {
+                        nutrientRates.put(nutrient, new double[]{minRate, maxRate});
+                    } else {
+                        // 如果出现下限大于上限的情况，取中间值
+                        double middleValue = (minRate + maxRate) / 2;
+                        nutrientRates.put(nutrient, new double[]{middleValue, middleValue});
+                        System.out.println("警告：营养素 " + nutrient + " 的多种疾病要求冲突，取中间值 " + middleValue);
+                    }
                 }
             }
         }
-        
-        // 设置每个营养素的达成率范围
-        planner.setNutrientAchievementRates(nutrientRates);
-    }
-    
-    /**
-     * 配置默认的营养素达成率范围（不考虑用户健康状况）
-     * @param planner NSGA-II膳食规划器
-     */
-    public static void configureNutrientAchievementRates(NSGAIIMealPlanner planner) {
-        // 设置默认的营养素达成率范围
-        planner.setNutrientAchievementRates(DEFAULT_NUTRIENT_RATES);
-        
-        // 为了向后兼容，也设置全局的最小和最大达成率
-        // planner.setMinNutrientAchievementRate(DEFAULT_MIN_RATE);
-        // planner.setMaxNutrientAchievementRate(DEFAULT_MAX_RATE);
+        return nutrientRates;
     }
 }

@@ -43,10 +43,6 @@ public class NSGAIIMealPlanner {
     private MealSelection selection;
     // 日志记录器,用于记录算法运行过程
     private NSGAIILogger logger;
-    // // 最低营养素达成率阈值，默认为0.7（70%）
-    // private double minNutrientAchievementRate = 0.8;
-    // // 最高营养素达成率阈值，默认为1.3（130%）
-    // private double maxNutrientAchievementRate = 1.1;
     
     // 不同营养素的达成率范围映射
     private Map<String, double[]> nutrientAchievementRates = new HashMap<>();
@@ -60,7 +56,7 @@ public class NSGAIIMealPlanner {
      * @param foodDatabase 食物数据库
      * @param userProfile 用户配置文件
      */
-    public NSGAIIMealPlanner(NSGAIIConfiguration config, List<Food> foodDatabase, UserProfile userProfile) {
+    public NSGAIIMealPlanner(NSGAIIConfiguration config, List<Food> foodDatabase, UserProfile userProfile, Map<String, double[]> nutrientAchievementRates) {
         this.config = config;
         this.foodDatabase = foodDatabase;
         this.userProfile = userProfile;
@@ -69,6 +65,7 @@ public class NSGAIIMealPlanner {
         this.mutation = new MealMutation(config.getMutationRate(), foodDatabase);
         this.selection = new MealSelection();
         this.logger = new NSGAIILogger();
+        this.nutrientAchievementRates = nutrientAchievementRates;
     }
     
     
@@ -425,107 +422,80 @@ public class NSGAIIMealPlanner {
     private double calculateAverageNutrientAchievement(MealSolution solution, Nutrition targetNutrients) {
         Nutrition actualNutrients = solution.calculateTotalNutrients();
         
-        double[] ratios = new double[8];
-        double[] scores = new double[8];
-        int count = 0;
+        // 使用Map存储各营养素的达成率和得分，而不是数组
+        Map<String, Double> nutrientRatios = new HashMap<>();
+        Map<String, Double> nutrientScores = new HashMap<>();
         
         // 计算各营养素的达成率
         if (targetNutrients.calories > 0) {
-            ratios[count] = actualNutrients.calories / targetNutrients.calories;
-            count++;
+            double ratio = actualNutrients.calories / targetNutrients.calories;
+            nutrientRatios.put("calories", ratio);
         }
         
         if (targetNutrients.carbohydrates > 0) {
-            ratios[count] = actualNutrients.carbohydrates / targetNutrients.carbohydrates;
-            count++;
+            double ratio = actualNutrients.carbohydrates / targetNutrients.carbohydrates;
+            nutrientRatios.put("carbohydrates", ratio);
         }
         
         if (targetNutrients.protein > 0) {
-            ratios[count] = actualNutrients.protein / targetNutrients.protein;
-            count++;
+            double ratio = actualNutrients.protein / targetNutrients.protein;
+            nutrientRatios.put("protein", ratio);
         }
         
         if (targetNutrients.fat > 0) {
-            ratios[count] = actualNutrients.fat / targetNutrients.fat;
-            count++;
+            double ratio = actualNutrients.fat / targetNutrients.fat;
+            nutrientRatios.put("fat", ratio);
         }
         
         if (targetNutrients.calcium > 0) {
-            ratios[count] = actualNutrients.calcium / targetNutrients.calcium;
-            count++;
+            double ratio = actualNutrients.calcium / targetNutrients.calcium;
+            nutrientRatios.put("calcium", ratio);
         }
         
         if (targetNutrients.potassium > 0) {
-            ratios[count] = actualNutrients.potassium / targetNutrients.potassium;
-            count++;
+            double ratio = actualNutrients.potassium / targetNutrients.potassium;
+            nutrientRatios.put("potassium", ratio);
         }
         
         if (targetNutrients.sodium > 0) {
-            ratios[count] = actualNutrients.sodium / targetNutrients.sodium;
-            count++;
+            double ratio = actualNutrients.sodium / targetNutrients.sodium;
+            nutrientRatios.put("sodium", ratio);
         }
         
         if (targetNutrients.magnesium > 0) {
-            ratios[count] = actualNutrients.magnesium / targetNutrients.magnesium;
-            count++;
+            double ratio = actualNutrients.magnesium / targetNutrients.magnesium;
+            nutrientRatios.put("magnesium", ratio);
         }
         
         // 计算每个营养素的得分
         // 当达成率在[minRate, maxRate]范围内时，得分为1.0
         // 当达成率超出范围时，得分根据偏离程度降低
-        for (int i = 0; i < count; i++) {
-            String nutrientName = getNutrientNameByIndex(i);
+        for (Map.Entry<String, Double> entry : nutrientRatios.entrySet()) {
+            String nutrientName = entry.getKey();
+            double ratio = entry.getValue();
             double[] range = getNutrientAchievementRate(nutrientName);
             double minRate = range[0];
             double maxRate = range[1];
             
-            if (ratios[i] >= minRate && ratios[i] <= maxRate) {
-                scores[i] = 1.0;
-            } else if (ratios[i] < minRate) {
-                scores[i] = ratios[i] / minRate;
+            double score;
+            if (ratio >= minRate && ratio <= maxRate) {
+                score = 1.0;
+            } else if (ratio < minRate) {
+                score = ratio / minRate;
             } else {
-                scores[i] = maxRate / ratios[i];
+                score = maxRate / ratio;
             }
+            
+            nutrientScores.put(nutrientName, score);
         }
         
         // 计算平均得分
         double totalScore = 0;
-        for (int i = 0; i < count; i++) {
-            totalScore += scores[i];
+        for (double score : nutrientScores.values()) {
+            totalScore += score;
         }
         
-        return count > 0 ? totalScore / count : 0;
-    }
-    
-    /**
-     * 根据索引获取营养素名称
-     * @param index 索引
-     * @return 营养素名称
-     */
-    private String getNutrientNameByIndex(int index) {
-        switch (index) {
-            case 0: return "calories";
-            case 1: return "carbohydrates";
-            case 2: return "protein";
-            case 3: return "fat";
-            case 4: return "calcium";
-            case 5: return "potassium";
-            case 6: return "sodium";
-            case 7: return "magnesium";
-            default: return "unknown";
-        }
-    }
-    
-    /**
-     * 记录当前代的信息
-     */
-    private void logGenerationInfo(int generation, Population population) {
-        // 计算并记录当前代的统计信息
-        List<MealSolution> firstFront = population.getSolutions().stream()
-                .filter(s -> s.getRank() == 1)
-                .collect(Collectors.toList());
-        
-        logger.logGeneration(generation, population, firstFront);
+        return nutrientScores.isEmpty() ? 0 : totalScore / nutrientScores.size();
     }
     
     /**
@@ -540,52 +510,6 @@ public class NSGAIIMealPlanner {
      */
     public void setConfig(NSGAIIConfiguration config) {
         this.config = config;
-    }
-    
-    // /**
-    //  * 获取最低营养素达成率
-    //  * @return 最低营养素达成率
-    //  */
-    // public double getMinNutrientAchievementRate() {
-    //     return minNutrientAchievementRate;
-    // }
-    
-    // /**
-    //  * 设置最低营养素达成率
-    //  * @param minNutrientAchievementRate 最低营养素达成率（0-1之间）
-    //  */
-    // public void setMinNutrientAchievementRate(double minNutrientAchievementRate) {
-    //     if (minNutrientAchievementRate < 0 || minNutrientAchievementRate > 1) {
-    //         throw new IllegalArgumentException("最低营养素达成率必须在0到1之间");
-    //     }
-    //     this.minNutrientAchievementRate = minNutrientAchievementRate;
-    // }
-    
-    // /**
-    //  * 获取最高营养素达成率
-    //  * @return 最高营养素达成率
-    //  */
-    // public double getMaxNutrientAchievementRate() {
-    //     return maxNutrientAchievementRate;
-    // }
-    
-    // /**
-    //  * 设置最高营养素达成率
-    //  * @param maxNutrientAchievementRate 最高营养素达成率（大于1）
-    //  */
-    // public void setMaxNutrientAchievementRate(double maxNutrientAchievementRate) {
-    //     if (maxNutrientAchievementRate <= 1) {
-    //         throw new IllegalArgumentException("最高营养素达成率必须大于1");
-    //     }
-    //     this.maxNutrientAchievementRate = maxNutrientAchievementRate;
-    // }
-    
-    /**
-     * 设置不同营养素的达成率范围
-     * @param nutrientRates 营养素达成率范围映射，格式为：营养素名称 -> [最小达成率, 最大达成率]
-     */
-    public void setNutrientAchievementRates(Map<String, double[]> nutrientRates) {
-        this.nutrientAchievementRates = nutrientRates;
     }
     
     /**
@@ -618,56 +542,49 @@ public class NSGAIIMealPlanner {
      */
     private double calculateNutrientDeviationScore(MealSolution solution, Nutrition targetNutrients) {
         Nutrition actualNutrients = solution.calculateTotalNutrients();
-        double totalDeviation = 0.0;
-        int count = 0;
+        Map<String, Double> nutrientDeviations = new HashMap<>();
         
         // 计算各营养素的偏离度
         if (targetNutrients.calories > 0) {
             double ratio = actualNutrients.calories / targetNutrients.calories;
             double[] range = getNutrientAchievementRate("calories");
             double deviation = calculateDeviationFromRange(ratio, range[0], range[1]);
-            totalDeviation += deviation;
-            count++;
+            nutrientDeviations.put("calories", deviation);
         }
         
         if (targetNutrients.carbohydrates > 0) {
             double ratio = actualNutrients.carbohydrates / targetNutrients.carbohydrates;
             double[] range = getNutrientAchievementRate("carbohydrates");
             double deviation = calculateDeviationFromRange(ratio, range[0], range[1]);
-            totalDeviation += deviation;
-            count++;
+            nutrientDeviations.put("carbohydrates", deviation);
         }
         
         if (targetNutrients.protein > 0) {
             double ratio = actualNutrients.protein / targetNutrients.protein;
             double[] range = getNutrientAchievementRate("protein");
             double deviation = calculateDeviationFromRange(ratio, range[0], range[1]);
-            totalDeviation += deviation;
-            count++;
+            nutrientDeviations.put("protein", deviation);
         }
         
         if (targetNutrients.fat > 0) {
             double ratio = actualNutrients.fat / targetNutrients.fat;
             double[] range = getNutrientAchievementRate("fat");
             double deviation = calculateDeviationFromRange(ratio, range[0], range[1]);
-            totalDeviation += deviation;
-            count++;
+            nutrientDeviations.put("fat", deviation);
         }
         
         if (targetNutrients.calcium > 0) {
             double ratio = actualNutrients.calcium / targetNutrients.calcium;
             double[] range = getNutrientAchievementRate("calcium");
             double deviation = calculateDeviationFromRange(ratio, range[0], range[1]);
-            totalDeviation += deviation;
-            count++;
+            nutrientDeviations.put("calcium", deviation);
         }
         
         if (targetNutrients.potassium > 0) {
             double ratio = actualNutrients.potassium / targetNutrients.potassium;
             double[] range = getNutrientAchievementRate("potassium");
             double deviation = calculateDeviationFromRange(ratio, range[0], range[1]);
-            totalDeviation += deviation;
-            count++;
+            nutrientDeviations.put("potassium", deviation);
         }
         
         if (targetNutrients.sodium > 0) {
@@ -678,19 +595,23 @@ public class NSGAIIMealPlanner {
             if (ratio > range[1]) {
                 deviation *= 1.5; // 钠过量的偏离权重更高
             }
-            totalDeviation += deviation;
-            count++;
+            nutrientDeviations.put("sodium", deviation);
         }
         
         if (targetNutrients.magnesium > 0) {
             double ratio = actualNutrients.magnesium / targetNutrients.magnesium;
             double[] range = getNutrientAchievementRate("magnesium");
             double deviation = calculateDeviationFromRange(ratio, range[0], range[1]);
-            totalDeviation += deviation;
-            count++;
+            nutrientDeviations.put("magnesium", deviation);
         }
         
-        return count > 0 ? totalDeviation / count : 0;
+        // 计算平均偏离度
+        double totalDeviation = 0;
+        for (double deviation : nutrientDeviations.values()) {
+            totalDeviation += deviation;
+        }
+        
+        return nutrientDeviations.isEmpty() ? 0 : totalDeviation / nutrientDeviations.size();
     }
     
     /**
@@ -708,5 +629,17 @@ public class NSGAIIMealPlanner {
         } else {
             return ratio - maxRate; // 过量的偏离
         }
+    }
+    
+    /**
+     * 记录当前代的信息
+     */
+    private void logGenerationInfo(int generation, Population population) {
+        // 计算并记录当前代的统计信息
+        List<MealSolution> firstFront = population.getSolutions().stream()
+                .filter(s -> s.getRank() == 1)
+                .collect(Collectors.toList());
+        
+        logger.logGeneration(generation, population, firstFront);
     }
 } 

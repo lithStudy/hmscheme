@@ -20,6 +20,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
 
 /**
@@ -51,12 +52,11 @@ public class GeneticMealPlannerDemo {
         Nutrition dailyNeeds = nutritionCalculator.calculateDailyNutrientNeeds();
         //一餐的目标摄入量
         Nutrition targetNutrients=dailyNeeds.scale(0.35);
+        // 配置营养素达成率范围，考虑用户的健康状况
+        Map<String, double[]> nutrientRates = NutrientObjectiveConfig.configureNutrientAchievementRates(userProfile);
         
         // 创建NSGA-II膳食规划器
-        NSGAIIMealPlanner planner = new NSGAIIMealPlanner(config, foodDatabase, userProfile);
-
-        // 配置营养素达成率范围，考虑用户的健康状况
-        NutrientObjectiveConfig.configureNutrientAchievementRates(planner, userProfile);
+        NSGAIIMealPlanner planner = new NSGAIIMealPlanner(config, foodDatabase, userProfile, nutrientRates);
         
         // 执行算法
         System.out.println("\n开始执行NSGA-II多目标遗传算法...");
