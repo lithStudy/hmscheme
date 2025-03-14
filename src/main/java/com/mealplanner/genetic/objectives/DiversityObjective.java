@@ -3,6 +3,8 @@ package com.mealplanner.genetic.objectives;
 import com.mealplanner.genetic.model.FoodGene;
 import com.mealplanner.genetic.model.MealSolution;
 import com.mealplanner.genetic.model.ObjectiveValue;
+import com.mealplanner.model.Food;
+import com.mealplanner.model.FoodCategory;
 
 import java.util.*;
 
@@ -32,7 +34,7 @@ public class DiversityObjective {
     private double categoryCoverageWeight = 0.2;
     
     // 理想的类别分布
-    private Map<String, Double> idealCategoryDistribution;
+    private Map<FoodCategory, Double> idealCategoryDistribution;
     
     /**
      * 构造函数
@@ -56,14 +58,14 @@ public class DiversityObjective {
      */
     private void initializeIdealDistribution() {
         idealCategoryDistribution = new HashMap<>();
-        idealCategoryDistribution.put("staple", 0.20);      // 主食
-        idealCategoryDistribution.put("vegetable", 0.30);   // 蔬菜
-        idealCategoryDistribution.put("fruit", 0.15);       // 水果
-        idealCategoryDistribution.put("meat", 0.15);        // 肉类
-        idealCategoryDistribution.put("fish", 0.05);        // 鱼类
-        idealCategoryDistribution.put("egg", 0.05);         // 蛋类
-        idealCategoryDistribution.put("milk", 0.05);        // 乳制品
-        idealCategoryDistribution.put("oil", 0.05);         // 油脂
+        idealCategoryDistribution.put(FoodCategory.STAPLE, 0.20);      // 主食
+        idealCategoryDistribution.put(FoodCategory.VEGETABLE, 0.30);   // 蔬菜
+        idealCategoryDistribution.put(FoodCategory.FRUIT, 0.15);       // 水果
+        idealCategoryDistribution.put(FoodCategory.MEAT, 0.15);        // 肉类
+        idealCategoryDistribution.put(FoodCategory.FISH, 0.05);        // 鱼类
+        idealCategoryDistribution.put(FoodCategory.EGG, 0.05);         // 蛋类
+        idealCategoryDistribution.put(FoodCategory.MILK, 0.05);        // 乳制品
+        idealCategoryDistribution.put(FoodCategory.OIL, 0.05);         // 油脂
     }
     
     /**
@@ -102,9 +104,9 @@ public class DiversityObjective {
      */
     private double evaluateCategoryDiversity(List<FoodGene> genes) {
         // 统计各类别食物数量
-        Map<String, Integer> categoryCount = new HashMap<>();
+        Map<FoodCategory, Integer> categoryCount = new HashMap<>();
         for (FoodGene gene : genes) {
-            String category = gene.getFood().getCategory();
+            FoodCategory category = gene.getFood().getCategory();
             categoryCount.put(category, categoryCount.getOrDefault(category, 0) + 1);
         }
         
@@ -115,14 +117,14 @@ public class DiversityObjective {
         double distributionScore = 0;
         if (!categoryCount.isEmpty()) {
             // 当前分布
-            Map<String, Double> actualDistribution = new HashMap<>();
-            for (Map.Entry<String, Integer> entry : categoryCount.entrySet()) {
+            Map<FoodCategory, Double> actualDistribution = new HashMap<>();
+            for (Map.Entry<FoodCategory, Integer> entry : categoryCount.entrySet()) {
                 actualDistribution.put(entry.getKey(), (double) entry.getValue() / genes.size());
             }
             
             // 计算与理想分布的相似度
             double similarity = 0;
-            for (String category : idealCategoryDistribution.keySet()) {
+            for (FoodCategory category : idealCategoryDistribution.keySet()) {
                 double ideal = idealCategoryDistribution.get(category);
                 double actual = actualDistribution.getOrDefault(category, 0.0);
                 // 使用 1 - 绝对差异 作为相似度，增加差异的惩罚力度
@@ -299,7 +301,7 @@ public class DiversityObjective {
      * 设置理想的类别分布
      * @param distribution 类别分布映射
      */
-    public void setIdealCategoryDistribution(Map<String, Double> distribution) {
+    public void setIdealCategoryDistribution(Map<FoodCategory, Double> distribution) {
         this.idealCategoryDistribution = new HashMap<>(distribution);
     }
     
@@ -307,7 +309,7 @@ public class DiversityObjective {
      * 获取理想的类别分布
      * @return 类别分布映射
      */
-    public Map<String, Double> getIdealCategoryDistribution() {
+    public Map<FoodCategory, Double> getIdealCategoryDistribution() {
         return new HashMap<>(idealCategoryDistribution);
     }
     

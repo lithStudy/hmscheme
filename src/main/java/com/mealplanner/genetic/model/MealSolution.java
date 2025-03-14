@@ -1,6 +1,7 @@
 package com.mealplanner.genetic.model;
 
 import com.mealplanner.model.Food;
+import com.mealplanner.model.FoodCategory;
 import com.mealplanner.model.Nutrition;
 
 import java.util.*;
@@ -60,7 +61,7 @@ public class MealSolution {
         if (requireStaple) {
             // 筛选所有主食
             List<Food> staples = foodDatabase.stream()
-                    .filter(food -> "staple".equals(food.getCategory()))
+                    .filter(food -> FoodCategory.STAPLE.equals(food.getCategory()))
                     .collect(Collectors.toList());
             
             if (!staples.isEmpty()) {
@@ -147,7 +148,7 @@ public class MealSolution {
         // 检查是否包含主食（如果需要）
         if (requireStaple) {
             boolean hasStaple = foodGenes.stream()
-                    .anyMatch(gene -> "staple".equals(gene.getFood().getCategory()));
+                    .anyMatch(gene -> FoodCategory.STAPLE.equals(gene.getFood().getCategory()));
             
             if (!hasStaple) {
                 return false;
@@ -264,11 +265,11 @@ public class MealSolution {
      * 获取食物类别统计
      * @return 每个类别的食物数量
      */
-    public Map<String, Integer> getFoodCategoryCount() {
-        Map<String, Integer> categoryCount = new HashMap<>();
+    public Map<FoodCategory, Integer> getFoodCategoryCount() {
+        Map<FoodCategory, Integer> categoryCount = new HashMap<>();
         
         for (FoodGene gene : foodGenes) {
-            String category = gene.getFood().getCategory();
+            FoodCategory category = gene.getFood().getCategory();
             categoryCount.put(category, categoryCount.getOrDefault(category, 0) + 1);
         }
         

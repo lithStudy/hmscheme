@@ -1,11 +1,17 @@
 package com.mealplanner.model;
 
+import lombok.Builder;
+import lombok.Getter;
+import lombok.AllArgsConstructor;
 /**
  * 食物类，表示一种食物及其营养和份量信息
  */
+@Builder
+@Getter
+@AllArgsConstructor
 public class Food {
     private String name;         // 食物名称
-    private String category;     // 食物类别
+    private FoodCategory category;     // 食物类别
     private Nutrition nutrition; // 营养信息（每100克）
     private Portion portion;     // 份量信息
     
@@ -16,6 +22,7 @@ public class Food {
     private String[] cookingMethods;  // 烹饪方式（如煎、炒、蒸、炖等）
     private int spicyLevel;           // 辣度等级（0-5，0表示不辣）
 
+
     /**
      * 创建一个食物对象
      * @param name 食物名称
@@ -23,7 +30,7 @@ public class Food {
      * @param nutrition 营养信息
      * @param portion 份量信息
      */
-    public Food(String name, String category, Nutrition nutrition, Portion portion) {
+    public Food(String name, FoodCategory category, Nutrition nutrition, Portion portion) {
         this.name = name;
         this.category = category;
         this.nutrition = nutrition;
@@ -34,68 +41,16 @@ public class Food {
         this.cookingMethods = new String[0];
         this.spicyLevel = 0;
     }
-    
+
     /**
-     * 创建一个完整的食物对象（包含所有属性）
+     * 兼容旧代码的构造函数，接受字符串类别
      * @param name 食物名称
-     * @param category 食物类别
+     * @param categoryStr 食物类别字符串
      * @param nutrition 营养信息
      * @param portion 份量信息
-     * @param allergens 过敏原
-     * @param religiousRestrictions 宗教限制
-     * @param flavorProfiles 口味特性
-     * @param cookingMethods 烹饪方式
-     * @param spicyLevel 辣度等级
      */
-    public Food(String name, String category, Nutrition nutrition, Portion portion,
-               String[] allergens, String[] religiousRestrictions, 
-               String[] flavorProfiles, String[] cookingMethods, int spicyLevel) {
-        this.name = name;
-        this.category = category;
-        this.nutrition = nutrition;
-        this.portion = portion;
-        this.allergens = allergens != null ? allergens : new String[0];
-        this.religiousRestrictions = religiousRestrictions != null ? religiousRestrictions : new String[0];
-        this.flavorProfiles = flavorProfiles != null ? flavorProfiles : new String[0];
-        this.cookingMethods = cookingMethods != null ? cookingMethods : new String[0];
-        this.spicyLevel = spicyLevel;
-    }
-
-    /**
-     * 获取食物的实际营养成分（根据份量计算）
-     * @return 实际营养成分
-     */
-    public Nutrition getActualNutrition() {
-        // 计算实际重量与100克的比例
-        double ratio = portion.getWeight() / 100.0;
-        // 按比例缩放营养成分
-        return nutrition.scale(ratio);
-    }
-
-    /**
-     * 创建具有特定摄入量的食物对象
-     * @param intakeWeight 实际摄入重量(g)
-     * @return 新的食物对象，具有指定摄入量
-     */
-    public Food withIntake(double intakeWeight) {
-        // 创建一个新的份量对象
-        Portion newPortion;
-        if ("克".equals(portion.getDisplayUnit()) || "g".equals(portion.getDisplayUnit())) {
-            // 如果单位是克，直接使用新的摄入量
-            newPortion = new Portion(intakeWeight, portion.getDisplayUnit(), intakeWeight);
-        } else {
-            // 如果是其他单位，按比例计算显示数量
-            double ratio = intakeWeight / portion.getWeight();
-            newPortion = new Portion(
-                intakeWeight,
-                portion.getDisplayUnit(),
-                portion.getDisplayAmount() * ratio
-            );
-        }
-        
-        // 返回新的食物对象，使用相同的名称、类别和营养信息，但有新的份量
-        return new Food(name, category, nutrition, newPortion, 
-                      allergens, religiousRestrictions, flavorProfiles, cookingMethods, spicyLevel);
+    public Food(String name, String categoryStr, Nutrition nutrition, Portion portion) {
+        this(name, FoodCategory.fromString(categoryStr), nutrition, portion);
     }
 
     /**
@@ -103,165 +58,6 @@ public class Food {
      * @return 推荐摄入量范围
      */
     public IntakeRange getRecommendedIntakeRange() {
-        switch (category) {
-            case "staple":       // 主食
-                return new IntakeRange(80.0, 150.0, 100.0);  // 主食80-150g，默认100g
-            case "vegetable":    // 蔬菜
-                return new IntakeRange(100.0, 250.0, 150.0); // 蔬菜100-250g，默认150g
-            case "fruit":        // 水果
-                return new IntakeRange(100.0, 250.0, 150.0); // 水果100-250g，默认150g
-            case "meat":         // 肉类
-                return new IntakeRange(50.0, 100.0, 75.0);   // 肉类50-100g，默认75g
-            case "fish":         // 鱼类
-                return new IntakeRange(50.0, 100.0, 75.0);   // 鱼类50-100g，默认75g
-            case "egg":          // 蛋类
-                return new IntakeRange(25.0, 75.0, 50.0);    // 蛋类25-75g，默认50g
-            case "milk":         // 乳制品
-                return new IntakeRange(100.0, 300.0, 200.0); // 乳制品100-300g，默认200g
-            case "oil":          // 油脂
-                return new IntakeRange(5.0, 15.0, 10.0);     // 油脂5-15g，默认10g
-            case "pastry":       // 糕点
-                return new IntakeRange(25.0, 75.0, 50.0);    // 糕点25-75g，默认50g
-            case "mushroom":     // 蘑菇
-                return new IntakeRange(50.0, 100.0, 75.0);   // 蘑菇50-100g，默认75g
-            case "bean":         // 豆类
-                return new IntakeRange(50.0, 100.0, 75.0);   // 豆类50-100g，默认75g
-            default:             // 默认
-                return new IntakeRange(25.0, 75.0, 50.0);    // 其他食物25-75g，默认50g
-        }
+        return category.getRecommendedIntakeRange();
     }
-
-    /**
-     * 根据营养需求计算最佳摄入量
-     * @param targetNutrients 目标营养素需求
-     * @return 最佳摄入量(g)
-     */
-    public double calculateOptimalIntake(Nutrition targetNutrients) {
-        IntakeRange range = getRecommendedIntakeRange();
-        double optimalIntake = range.getDefaultIntake();
-
-        // 根据营养素需求调整摄入量
-        if (nutrition.getCalories() > 0) {
-            // 基于热量需求调整
-            double calorieRatio = targetNutrients.calories / (nutrition.getCalories() * range.getDefaultIntake() / 100.0);
-            double calorieBasedIntake = range.getDefaultIntake() * calorieRatio;
-            
-            // 基于蛋白质需求调整
-            double proteinRatio = targetNutrients.protein / (nutrition.getProtein() * range.getDefaultIntake() / 100.0);
-            double proteinBasedIntake = range.getDefaultIntake() * proteinRatio;
-            
-            // 基于碳水需求调整
-            double carbRatio = targetNutrients.carbohydrates / (nutrition.getCarbohydrates() * range.getDefaultIntake() / 100.0);
-            double carbBasedIntake = range.getDefaultIntake() * carbRatio;
-            
-            // 综合考虑不同营养素需求，计算加权平均值
-            double weightCalorie = 1.0;
-            double weightProtein = 1.0;
-            double weightCarb = 1.0;
-            
-            optimalIntake = (calorieBasedIntake * weightCalorie + 
-                           proteinBasedIntake * weightProtein + 
-                           carbBasedIntake * weightCarb) / 
-                          (weightCalorie + weightProtein + weightCarb);
-        }
-        
-        // 确保最佳摄入量在允许范围内
-        return range.adjustToRange(optimalIntake);
-    }
-
-    /**
-     * 获取食物的推荐摄入量（根据食物类别）
-     * @return 推荐摄入量(g)
-     */
-    public double getRecommendedIntake() {
-        return getRecommendedIntakeRange().getDefaultIntake();
-    }
-
-    /**
-     * 获取食物的份量描述
-     * @return 格式化的份量描述字符串
-     */
-    public String getPortionDescription() {
-        return portion.getDescription();
-    }
-
-    /**
-     * 检查食物是否含有特定过敏原
-     * @param allergen 要检查的过敏原
-     * @return 如果含有该过敏原则返回true
-     */
-    public boolean containsAllergen(String allergen) {
-        for (String a : allergens) {
-            if (a.equalsIgnoreCase(allergen)) {
-                return true;
-            }
-        }
-        return false;
-    }
-    
-    /**
-     * 检查食物是否有特定宗教限制
-     * @param restriction 要检查的宗教限制
-     * @return 如果有该宗教限制则返回true
-     */
-    public boolean hasReligiousRestriction(String restriction) {
-        for (String r : religiousRestrictions) {
-            if (r.equalsIgnoreCase(restriction)) {
-                return true;
-            }
-        }
-        return false;
-    }
-    
-    /**
-     * 检查食物是否具有特定口味特性
-     * @param flavor 要检查的口味特性
-     * @return 如果具有该口味特性则返回true
-     */
-    public boolean hasFlavorProfile(String flavor) {
-        for (String f : flavorProfiles) {
-            if (f.equalsIgnoreCase(flavor)) {
-                return true;
-            }
-        }
-        return false;
-    }
-    
-    /**
-     * 检查食物是否使用特定烹饪方式
-     * @param method 要检查的烹饪方式
-     * @return 如果使用该烹饪方式则返回true
-     */
-    public boolean usesCookingMethod(String method) {
-        for (String m : cookingMethods) {
-            if (m.equalsIgnoreCase(method)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    // Getters
-    public String getName() { return name; }
-    public String getCategory() { return category; }
-    public Nutrition getNutrition() { return nutrition; }
-    public Portion getPortion() { return portion; }
-    
-    // Getters for new fields
-    public String[] getAllergens() { return allergens; }
-    public String[] getReligiousRestrictions() { return religiousRestrictions; }
-    public String[] getFlavorProfiles() { return flavorProfiles; }
-    public String[] getCookingMethods() { return cookingMethods; }
-    public int getSpicyLevel() { return spicyLevel; }
-    
-    // 便捷方法，直接获取营养成分
-    public double getCarbohydrates() { return getActualNutrition().getCarbohydrates(); }
-    public double getProtein() { return getActualNutrition().getProtein(); }
-    public double getFat() { return getActualNutrition().getFat(); }
-    public double getCalcium() { return getActualNutrition().getCalcium(); }
-    public double getPotassium() { return getActualNutrition().getPotassium(); }
-    public double getSodium() { return getActualNutrition().getSodium(); }
-    public double getMagnesium() { return getActualNutrition().getMagnesium(); }
-    public double getCalories() { return getActualNutrition().getCalories(); }
-    public double getWeight() { return portion.getWeight(); }
 } 

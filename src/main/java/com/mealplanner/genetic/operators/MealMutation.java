@@ -3,6 +3,7 @@ package com.mealplanner.genetic.operators;
 import com.mealplanner.genetic.model.FoodGene;
 import com.mealplanner.genetic.model.MealSolution;
 import com.mealplanner.model.Food;
+import com.mealplanner.model.FoodCategory;
 import com.mealplanner.model.Nutrition;
 
 import java.util.*;
@@ -176,15 +177,15 @@ public class MealMutation {
         FoodGene geneToReplace = genes.get(index);
         
         // 如果需要主食且选中的是唯一的主食，则不替换
-        if (requireStaple && "staple".equals(geneToReplace.getFood().getCategory())) {
+        if (requireStaple && FoodCategory.STAPLE.equals(geneToReplace.getFood().getCategory())) {
             boolean isOnlyStaple = genes.stream()
-                    .filter(g -> "staple".equals(g.getFood().getCategory()))
+                    .filter(g -> FoodCategory.STAPLE.equals(g.getFood().getCategory()))
                     .count() <= 1;
             
             if (isOnlyStaple) {
                 // 如果是唯一的主食，尝试选择另一个非主食食物
                 List<FoodGene> nonStapleGenes = genes.stream()
-                        .filter(g -> !"staple".equals(g.getFood().getCategory()))
+                        .filter(g -> !FoodCategory.STAPLE.equals(g.getFood().getCategory()))
                         .collect(Collectors.toList());
                 
                 if (nonStapleGenes.isEmpty()) {
@@ -198,7 +199,7 @@ public class MealMutation {
         }
         
         // 获取当前食物的类别
-        String category = geneToReplace.getFood().getCategory();
+        FoodCategory category = geneToReplace.getFood().getCategory();
         
         // 筛选同类别的食物，排除已在解决方案中的食物
         List<Food> candidateFoods = foodDatabase.stream()
@@ -295,9 +296,9 @@ public class MealMutation {
             FoodGene gene = genes.get(i);
             
             // 如果需要主食且该食物是唯一的主食，则不能移除
-            if (requireStaple && "staple".equals(gene.getFood().getCategory())) {
+            if (requireStaple && FoodCategory.STAPLE.equals(gene.getFood().getCategory())) {
                 boolean isOnlyStaple = genes.stream()
-                        .filter(g -> "staple".equals(g.getFood().getCategory()))
+                        .filter(g -> FoodCategory.STAPLE.equals(g.getFood().getCategory()))
                         .count() <= 1;
                 
                 if (isOnlyStaple) {

@@ -3,6 +3,8 @@ package com.mealplanner.genetic.objectives;
 import com.mealplanner.genetic.model.FoodGene;
 import com.mealplanner.genetic.model.MealSolution;
 import com.mealplanner.genetic.model.ObjectiveValue;
+import com.mealplanner.model.Food;
+import com.mealplanner.model.FoodCategory;
 import com.mealplanner.model.Nutrition;
 
 import java.util.*;
@@ -123,24 +125,23 @@ public class BalanceObjective {
      * @return 食物组合合理性得分（0-1之间）
      */
     private double evaluateFoodCombination(List<FoodGene> genes) {
-        // 检查是否包含必要的食物类别
         boolean hasStaple = false;
         boolean hasVegetable = false;
         boolean hasProteinSource = false;
         
         // 食物类别计数
-        Map<String, Integer> categoryCount = new HashMap<>();
+        Map<FoodCategory, Integer> categoryCount = new HashMap<>();
         
         for (FoodGene gene : genes) {
-            String category = gene.getFood().getCategory();
+            FoodCategory category = gene.getFood().getCategory();
             categoryCount.put(category, categoryCount.getOrDefault(category, 0) + 1);
             
-            if ("staple".equals(category)) {
+            if (FoodCategory.STAPLE.equals(category)) {
                 hasStaple = true;
-            } else if ("vegetable".equals(category)) {
+            } else if (FoodCategory.VEGETABLE.equals(category)) {
                 hasVegetable = true;
-            } else if ("meat".equals(category) || "fish".equals(category) || 
-                       "egg".equals(category) || "bean".equals(category)) {
+            } else if (FoodCategory.MEAT.equals(category) || FoodCategory.FISH.equals(category) || 
+                       FoodCategory.EGG.equals(category) || FoodCategory.BEAN.equals(category)) {
                 hasProteinSource = true;
             }
         }
@@ -165,7 +166,7 @@ public class BalanceObjective {
         
         // 检查类别平衡性
         double balanceScore = 0;
-        for (Map.Entry<String, Integer> entry : categoryCount.entrySet()) {
+        for (Map.Entry<FoodCategory, Integer> entry : categoryCount.entrySet()) {
             if (entry.getValue() > 3) {
                 // 扣分：某一类别食物过多
                 balanceScore -= 0.05 * (entry.getValue() - 3);
@@ -188,22 +189,21 @@ public class BalanceObjective {
         // 评分：热量接近基准值
         double caloriesScore = 1.0 - Math.min(1.0, Math.abs(totalCalories - targetNutrients.calories) / targetNutrients.calories);
         
-        // // 评分：食物数量合理
-        // int foodCount = solution.getFoodGenes().size();
-        // double foodCountScore;
+        // 评分：食物数量合理
+        int foodCount = solution.getFoodGenes().size();
+        double foodCountScore;
         
-        // if (foodCount >= 3 && foodCount <= 6) {
-        //     // 理想的食物数量
-        //     foodCountScore = 1.0;
-        // } else if (foodCount < 3) {
-        //     // 食物太少
-        //     foodCountScore = 0.5 + (foodCount / 6.0);
-        // } else {
-        //     // 食物太多
-        //     foodCountScore = 0.5 * (10 - foodCount) / 4.0;
-        // }
-        
-        // foodCountScore = Math.max(0, Math.min(1, foodCountScore));
+        if (foodCount >= 3 && foodCount <= 6) {
+            // 理想的食物数量
+            foodCountScore = 1.0;
+        } else if (foodCount < 3) {
+            // 食物太少
+            foodCountScore = 0.5 + (foodCount / 6.0);
+        } else {
+            // 食物太多
+            foodCountScore = 0.5 * (10 - foodCount) / 4.0;
+        }
+        foodCountScore = Math.max(0, Math.min(1, foodCountScore));
         
         // 评分：单个食物摄入量合理性
         double intakeRationalityScore = 0;
@@ -235,8 +235,8 @@ public class BalanceObjective {
         }
         
         // 综合评分
-        // return caloriesScore * 0.5 + foodCountScore * 0.3 + intakeRationalityScore * 0.2;
-        return caloriesScore * 0.5 + intakeRationalityScore * 0.2;
+        return caloriesScore * 0.5 + foodCountScore * 0.3 + intakeRationalityScore * 0.2;
+        // return caloriesScore * 0.5 + intakeRationalityScore * 0.2;
 
     }
     

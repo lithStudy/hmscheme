@@ -6,6 +6,7 @@ import lombok.Data;
 import com.mealplanner.model.Food;
 import com.mealplanner.model.Nutrition;
 import com.mealplanner.model.Portion;
+import com.mealplanner.model.FoodCategory;
 
 /**
  * 营养数据模型类，使用EasyExcel注解映射Excel列
@@ -142,33 +143,10 @@ public class NutritionData {
         try {
             // 解析基本信息
             String name = sampleName != null ? sampleName : "未知食物";
-            String category = foodCategory != null ? foodCategory : "其他";
-            if(category.equals("穀物類")){
-                category = "staple";
-            }else if(category.equals("蔬菜類")){
-                category = "vegetable";
-            }else if(category.equals("水果類")){
-                category = "fruit";
-            }else if(category.equals("肉類")){
-                category = "meat";
-            }else if(category.equals("魚類")){
-                category = "fish";
-            }else if(category.equals("蛋類")){
-                category = "egg";
-            }else if(category.equals("乳品類")){
-                category = "milk";
-            }else if(category.equals("油脂類")){
-                category = "oil";
-            }else if(category.equals("糕餅點心類")){
-                category = "pastry";
-            }else if(category.equals("菇類")){
-                category = "mushroom";
-            }else if(category.equals("豆類")){
-                category = "bean";
-            }
-            else if(category.equals("其他")){
-                category = "other";
-            }
+            FoodCategory category;
+
+            category = FoodCategory.fromChineseName(foodCategory);
+            
             
             // 解析营养成分
             double caloriesValue = parseDouble(calories);
