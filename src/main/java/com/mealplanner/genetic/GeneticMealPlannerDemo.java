@@ -53,7 +53,7 @@ public class GeneticMealPlannerDemo {
         //一餐的目标摄入量
         Nutrition targetNutrients=dailyNeeds.scale(0.35);
         // 配置营养素达成率范围，考虑用户的健康状况
-        Map<String, double[]> nutrientRates = NutrientObjectiveConfig.configureNutrientAchievementRates(userProfile);
+        Map<String, double[]> nutrientRates = NutrientObjectiveConfig.configureNutrientAchievementRatesLegacy(userProfile);
         
         // 创建NSGA-II膳食规划器
         NSGAIIMealPlanner planner = new NSGAIIMealPlanner(config, foodDatabase, userProfile, nutrientRates);

@@ -5,21 +5,16 @@ import com.mealplanner.genetic.model.MealSolution;
 import com.mealplanner.genetic.model.ObjectiveValue;
 import com.mealplanner.model.Food;
 import com.mealplanner.model.UserProfile;
+import com.mealplanner.model.Nutrition;
 
 import java.util.List;
 
 /**
  * 用户偏好目标类，评估解决方案与用户偏好的匹配度
  */
-public class PreferenceObjective {
-    // 目标名称
-    private final String name = "preference_objective";
-    
+public class PreferenceObjective extends AbstractObjectiveEvaluator {
     // 用户档案
     private UserProfile userProfile;
-    
-    // 目标权重
-    private double weight;
     
     // 各种偏好因素的权重
     private double flavorWeight = 0.3;
@@ -33,8 +28,8 @@ public class PreferenceObjective {
      * @param userProfile 用户档案
      */
     public PreferenceObjective(UserProfile userProfile) {
+        super("preference_objective", 0.2);
         this.userProfile = userProfile;
-        this.weight = 0.2; // 默认权重
     }
     
     /**
@@ -43,8 +38,19 @@ public class PreferenceObjective {
      * @param weight 目标权重
      */
     public PreferenceObjective(UserProfile userProfile, double weight) {
+        super("preference_objective", weight);
         this.userProfile = userProfile;
-        this.weight = weight;
+    }
+    
+    /**
+     * 评估解决方案与用户偏好的匹配度
+     * @param solution 解决方案
+     * @param targetNutrients 目标营养素（此参数在偏好评估中不使用，但需要实现接口）
+     * @return 目标值
+     */
+    @Override
+    public ObjectiveValue evaluate(MealSolution solution, Nutrition targetNutrients) {
+        return evaluate(solution);
     }
     
     /**
@@ -55,13 +61,13 @@ public class PreferenceObjective {
     public ObjectiveValue evaluate(MealSolution solution) {
         // 如果没有用户档案，则默认完全匹配
         if (userProfile == null) {
-            return new ObjectiveValue(name, 1.0, weight);
+            return new ObjectiveValue(getName(), 1.0, getWeight());
         }
         
         List<FoodGene> genes = solution.getFoodGenes();
         
         if (genes.isEmpty()) {
-            return new ObjectiveValue(name, 0.0, weight);
+            return new ObjectiveValue(getName(), 0.0, getWeight());
         }
         
         double totalScore = 0;
@@ -88,7 +94,7 @@ public class PreferenceObjective {
             averageScore *= Math.pow(0.5, violationCount);
         }
         
-        return new ObjectiveValue(name, averageScore, weight);
+        return new ObjectiveValue(getName(), averageScore, getWeight());
     }
     
     /**
@@ -134,30 +140,6 @@ public class PreferenceObjective {
         
         // 限制分数在0-1范围内
         return Math.max(0, Math.min(1, score));
-    }
-    
-    /**
-     * 获取目标名称
-     * @return 目标名称
-     */
-    public String getName() {
-        return name;
-    }
-    
-    /**
-     * 获取目标权重
-     * @return
-     */
-    public double getWeight() {
-        return weight;
-    }
-    
-    /**
-     * 设置目标权重
-     * @param weight 目标权重
-     */
-    public void setWeight(double weight) {
-        this.weight = weight;
     }
     
     /**

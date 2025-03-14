@@ -91,50 +91,6 @@ public class FoodGene {
         intake = Math.round(lowerBound + newPosition * (upperBound - lowerBound));
     }
     
-    /**
-     * 获取该食物在当前摄入量下的营养素估计值
-     * 以每克为单位
-     * @param nutrientName 营养素名称
-     * @return 营养素量
-     */
-    public double getNutrientAmount(String nutrientName) {
-        if (food == null) {
-            return 0;
-        }
-        
-        double per100g = 0;
-        switch (nutrientName.toLowerCase()) {
-            case "calories":
-                per100g = food.getNutrition().getCalories();
-                break;
-            case "carbohydrates":
-                per100g = food.getNutrition().getCarbohydrates();
-                break;
-            case "protein":
-                per100g = food.getNutrition().getProtein();
-                break;
-            case "fat":
-                per100g = food.getNutrition().getFat();
-                break;
-            case "calcium":
-                per100g = food.getNutrition().getCalcium();
-                break;
-            case "potassium":
-                per100g = food.getNutrition().getPotassium();
-                break;
-            case "sodium":
-                per100g = food.getNutrition().getSodium();
-                break;
-            case "magnesium":
-                per100g = food.getNutrition().getMagnesium();
-                break;
-            default:
-                return 0;
-        }
-        
-        // 转换为当前摄入量
-        return per100g * (intake / 100.0);
-    }
     
     @Override
     public String toString() {

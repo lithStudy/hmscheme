@@ -3,43 +3,30 @@ package com.mealplanner.genetic.objectives;
 import com.mealplanner.genetic.model.FoodGene;
 import com.mealplanner.genetic.model.MealSolution;
 import com.mealplanner.genetic.model.ObjectiveValue;
-import com.mealplanner.model.Food;
-import com.mealplanner.model.FoodCategory;
 import com.mealplanner.model.Nutrition;
 
 import java.util.*;
 
 /**
- * 平衡目标类，评估膳食解决方案的营养平衡和合理性
+ * 平衡目标类，专注于评估膳食解决方案的营养平衡和摄入量合理性
  */
-public class BalanceObjective {
-    // 目标名称
-    private final String name = "balance_objective";
-    
-    // 目标权重
-    private double weight=0.2;
-    
+public class BalanceObjective extends AbstractObjectiveEvaluator {
     // 宏量营养素比例权重
-    private double macroRatioWeight = 0.5;
-    
-    // 食物组合合理性权重
-    private double foodCombinationWeight = 0.3;
+    private double macroRatioWeight = 0.6;
     
     // 摄入量合理性权重
-    private double intakeRationalityWeight = 0.2;
+    private double intakeRationalityWeight = 0.4;
     
     // 理想的宏量营养素比例
     private double idealCarbPercentage = 0.60; // 碳水占60%
     private double idealProteinPercentage = 0.15; // 蛋白质占15%
     private double idealFatPercentage = 0.25; // 脂肪占25%
     
-    // // 摄入量合理性评估的基准值
-    // private double baselineCaloriesPerMeal = 600; // 一餐基准热量
-    
     /**
      * 构造函数
      */
     public BalanceObjective() {
+        super("balance_objective", 0.2);
     }
     
     /**
@@ -47,15 +34,17 @@ public class BalanceObjective {
      * @param weight 目标权重
      */
     public BalanceObjective(double weight) {
-        this.weight = weight;
+        super("balance_objective", weight);
     }
     
     /**
      * 评估解决方案的营养平衡
      * @param solution 解决方案
+     * @param targetNutrients 目标营养素
      * @return 目标值
      */
-    public ObjectiveValue evaluate(MealSolution solution,Nutrition targetNutrients) {
+    @Override
+    public ObjectiveValue evaluate(MealSolution solution, Nutrition targetNutrients) {
         List<FoodGene> genes = solution.getFoodGenes();
         
         if (genes.isEmpty()) {
@@ -65,15 +54,11 @@ public class BalanceObjective {
         // 计算宏量营养素比例得分
         double macroRatioScore = evaluateMacroNutrientRatio(solution);
         
-        // 计算食物组合合理性得分
-        double foodCombinationScore = evaluateFoodCombination(genes);
-        
         // 计算摄入量合理性得分
-        double intakeRationalityScore = evaluateIntakeRationality(solution,targetNutrients);
+        double intakeRationalityScore = evaluateIntakeRationality(solution, targetNutrients);
         
         // 计算加权总分
         double totalScore = macroRatioScore * macroRatioWeight + 
-                           foodCombinationScore * foodCombinationWeight + 
                            intakeRationalityScore * intakeRationalityWeight;
         
         return new ObjectiveValue(name, totalScore, weight);
@@ -120,90 +105,17 @@ public class BalanceObjective {
     }
     
     /**
-     * 评估食物组合的合理性
-     * @param genes 食物基因列表
-     * @return 食物组合合理性得分（0-1之间）
-     */
-    private double evaluateFoodCombination(List<FoodGene> genes) {
-        boolean hasStaple = false;
-        boolean hasVegetable = false;
-        boolean hasProteinSource = false;
-        
-        // 食物类别计数
-        Map<FoodCategory, Integer> categoryCount = new HashMap<>();
-        
-        for (FoodGene gene : genes) {
-            FoodCategory category = gene.getFood().getCategory();
-            categoryCount.put(category, categoryCount.getOrDefault(category, 0) + 1);
-            
-            if (FoodCategory.STAPLE.equals(category)) {
-                hasStaple = true;
-            } else if (FoodCategory.VEGETABLE.equals(category)) {
-                hasVegetable = true;
-            } else if (FoodCategory.MEAT.equals(category) || FoodCategory.FISH.equals(category) || 
-                       FoodCategory.EGG.equals(category) || FoodCategory.BEAN.equals(category)) {
-                hasProteinSource = true;
-            }
-        }
-        
-        // 基础得分：是否包含基本营养成分
-        double baseScore = 0;
-        if (hasStaple) baseScore += 0.3;
-        if (hasVegetable) baseScore += 0.3;
-        if (hasProteinSource) baseScore += 0.3;
-        
-        // 食物类别多样性得分
-        double diversityScore = 0;
-        int distinctCategories = categoryCount.size();
-        
-        if (distinctCategories >= 4) {
-            diversityScore = 0.1;
-        } else if (distinctCategories == 3) {
-            diversityScore = 0.07;
-        } else if (distinctCategories == 2) {
-            diversityScore = 0.05;
-        }
-        
-        // 检查类别平衡性
-        double balanceScore = 0;
-        for (Map.Entry<FoodCategory, Integer> entry : categoryCount.entrySet()) {
-            if (entry.getValue() > 3) {
-                // 扣分：某一类别食物过多
-                balanceScore -= 0.05 * (entry.getValue() - 3);
-            }
-        }
-        
-        // 总分
-        return Math.max(0, Math.min(1, baseScore + diversityScore + balanceScore));
-    }
-    
-    /**
      * 评估摄入量的合理性
      * @param solution 解决方案
+     * @param targetNutrients 目标营养素
      * @return 摄入量合理性得分（0-1之间）
      */
-    private double evaluateIntakeRationality(MealSolution solution,Nutrition targetNutrients) {
+    private double evaluateIntakeRationality(MealSolution solution, Nutrition targetNutrients) {
         // 获取总热量
         double totalCalories = solution.calculateTotalNutrients().calories;
         
-        // 评分：热量接近基准值
+        // 评分：热量接近目标值
         double caloriesScore = 1.0 - Math.min(1.0, Math.abs(totalCalories - targetNutrients.calories) / targetNutrients.calories);
-        
-        // 评分：食物数量合理
-        int foodCount = solution.getFoodGenes().size();
-        double foodCountScore;
-        
-        if (foodCount >= 3 && foodCount <= 6) {
-            // 理想的食物数量
-            foodCountScore = 1.0;
-        } else if (foodCount < 3) {
-            // 食物太少
-            foodCountScore = 0.5 + (foodCount / 6.0);
-        } else {
-            // 食物太多
-            foodCountScore = 0.5 * (10 - foodCount) / 4.0;
-        }
-        foodCountScore = Math.max(0, Math.min(1, foodCountScore));
         
         // 评分：单个食物摄入量合理性
         double intakeRationalityScore = 0;
@@ -234,34 +146,8 @@ public class BalanceObjective {
             intakeRationalityScore = 0;
         }
         
-        // 综合评分
-        return caloriesScore * 0.5 + foodCountScore * 0.3 + intakeRationalityScore * 0.2;
-        // return caloriesScore * 0.5 + intakeRationalityScore * 0.2;
-
-    }
-    
-    /**
-     * 获取目标名称
-     * @return 目标名称
-     */
-    public String getName() {
-        return name;
-    }
-    
-    /**
-     * 获取目标权重
-     * @return 目标权重
-     */
-    public double getWeight() {
-        return weight;
-    }
-    
-    /**
-     * 设置目标权重
-     * @param weight 目标权重
-     */
-    public void setWeight(double weight) {
-        this.weight = weight;
+        // 综合评分：热量合理性占60%，食物摄入量合理性占40%
+        return caloriesScore * 0.6 + intakeRationalityScore * 0.4;
     }
     
     /**
@@ -278,22 +164,8 @@ public class BalanceObjective {
      */
     public void setMacroRatioWeight(double macroRatioWeight) {
         this.macroRatioWeight = macroRatioWeight;
-    }
-    
-    /**
-     * 获取食物组合合理性权重
-     * @return 食物组合合理性权重
-     */
-    public double getFoodCombinationWeight() {
-        return foodCombinationWeight;
-    }
-    
-    /**
-     * 设置食物组合合理性权重
-     * @param foodCombinationWeight 食物组合合理性权重
-     */
-    public void setFoodCombinationWeight(double foodCombinationWeight) {
-        this.foodCombinationWeight = foodCombinationWeight;
+        // 确保权重总和为1
+        this.intakeRationalityWeight = 1 - macroRatioWeight;
     }
     
     /**
@@ -310,6 +182,8 @@ public class BalanceObjective {
      */
     public void setIntakeRationalityWeight(double intakeRationalityWeight) {
         this.intakeRationalityWeight = intakeRationalityWeight;
+        // 确保权重总和为1
+        this.macroRatioWeight = 1 - intakeRationalityWeight;
     }
     
     /**
@@ -332,5 +206,4 @@ public class BalanceObjective {
             this.idealFatPercentage = fatPercentage;
         }
     }
-    
 }

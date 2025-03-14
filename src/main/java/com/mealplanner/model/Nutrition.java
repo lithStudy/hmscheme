@@ -15,6 +15,8 @@ public class Nutrition {
     public double potassium;     // 钾(mg)
     public double sodium;        // 钠(mg)
     public double magnesium;     // 镁(mg)
+    public double iron;          // 铁(mg)
+    public double phosphorus;    // 磷(mg)
 
     public Nutrition(double calories, double carbohydrates, double protein, double fat,
                     double calcium, double potassium, double sodium, double magnesium) {
@@ -26,6 +28,24 @@ public class Nutrition {
         this.potassium = potassium;
         this.sodium = sodium;
         this.magnesium = magnesium;
+        this.iron = 0;
+        this.phosphorus = 0;
+        calculateCalories();
+    }
+    
+    public Nutrition(double calories, double carbohydrates, double protein, double fat,
+                    double calcium, double potassium, double sodium, double magnesium,
+                    double iron, double phosphorus) {
+        this.calories = calories;
+        this.carbohydrates = carbohydrates;
+        this.protein = protein;
+        this.fat = fat;
+        this.calcium = calcium;
+        this.potassium = potassium;
+        this.sodium = sodium;
+        this.magnesium = magnesium;
+        this.iron = iron;
+        this.phosphorus = phosphorus;
         calculateCalories();
     }
 
@@ -48,7 +68,9 @@ public class Nutrition {
             calcium * ratio,
             potassium * ratio,
             sodium * ratio,
-            magnesium * ratio
+            magnesium * ratio,
+            iron * ratio,
+            phosphorus * ratio
         );
     }
 
@@ -66,7 +88,9 @@ public class Nutrition {
             this.calcium + other.calcium,
             this.potassium + other.potassium,
             this.sodium + other.sodium,
-            this.magnesium + other.magnesium
+            this.magnesium + other.magnesium,
+            this.iron + other.iron,
+            this.phosphorus + other.phosphorus
         );
     }
 
@@ -84,8 +108,25 @@ public class Nutrition {
             this.calcium - other.calcium,
             this.potassium - other.potassium,
             this.sodium - other.sodium,
-            this.magnesium - other.magnesium
+            this.magnesium - other.magnesium,
+            this.iron - other.iron,
+            this.phosphorus - other.phosphorus
         );
     }
-
+    
+    /**
+     * 获取铁含量
+     * @return 铁含量(mg)
+     */
+    public double getIron() {
+        return iron;
+    }
+    
+    /**
+     * 获取磷含量
+     * @return 磷含量(mg)
+     */
+    public double getPhosphorus() {
+        return phosphorus;
+    }
 } 

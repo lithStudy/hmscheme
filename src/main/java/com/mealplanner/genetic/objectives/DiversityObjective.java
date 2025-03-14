@@ -3,29 +3,23 @@ package com.mealplanner.genetic.objectives;
 import com.mealplanner.genetic.model.FoodGene;
 import com.mealplanner.genetic.model.MealSolution;
 import com.mealplanner.genetic.model.ObjectiveValue;
-import com.mealplanner.model.Food;
 import com.mealplanner.model.FoodCategory;
+import com.mealplanner.model.Nutrition;
 
 import java.util.*;
 
 /**
- * 多样性目标类，评估膳食解决方案的食物多样性
+ * 多样性目标类，专注于评估膳食解决方案的食物多样性和食物组合合理性
  */
-public class DiversityObjective {
-    // 目标名称
-    private final String name = "diversity_objective";
-    
-    // 目标权重
-    private double weight;
-    
+public class DiversityObjective extends AbstractObjectiveEvaluator {
     // 类别多样性权重
     private double categoryWeight = 0.5;
     
     // 食物特性多样性权重
-    private double attributeWeight = 0.2;
+    private double attributeWeight = 0.3;
     
-    // 摄入量均衡权重：摄入量暂时不需要均衡
-    private double intakeWeight = 0;
+    // 食物组合合理性权重
+    private double foodCombinationWeight = 0.2;
     
     // 类别分布在类别多样性中的权重
     private double categoryDistributionWeight = 0.8;
@@ -40,7 +34,7 @@ public class DiversityObjective {
      * 构造函数
      */
     public DiversityObjective() {
-        this.weight = 0.2; // 默认权重
+        super("diversity_objective", 0.2);
         initializeIdealDistribution();
     }
     
@@ -49,7 +43,7 @@ public class DiversityObjective {
      * @param weight 目标权重
      */
     public DiversityObjective(double weight) {
-        this.weight = weight;
+        super("diversity_objective", weight);
         initializeIdealDistribution();
     }
     
@@ -71,13 +65,24 @@ public class DiversityObjective {
     /**
      * 评估解决方案的多样性
      * @param solution 解决方案
+     * @param targetNutrients 目标营养素（此参数在多样性评估中不使用，但需要实现接口）
+     * @return 目标值
+     */
+    @Override
+    public ObjectiveValue evaluate(MealSolution solution, Nutrition targetNutrients) {
+        return evaluate(solution);
+    }
+    
+    /**
+     * 评估解决方案的多样性（不需要目标营养素参数的版本）
+     * @param solution 解决方案
      * @return 目标值
      */
     public ObjectiveValue evaluate(MealSolution solution) {
         List<FoodGene> genes = solution.getFoodGenes();
         
         if (genes.isEmpty()) {
-            return new ObjectiveValue(name, 0.0, weight);
+            return new ObjectiveValue(getName(), 0.0, getWeight());
         }
         
         // 计算类别多样性得分
@@ -86,15 +91,15 @@ public class DiversityObjective {
         // 计算食物特性多样性得分
         double attributeScore = evaluateAttributeDiversity(genes);
         
-        // 计算摄入量均衡得分
-        double intakeScore = evaluateIntakeBalance(genes);
+        // 计算食物组合合理性得分
+        double foodCombinationScore = evaluateFoodCombination(genes);
         
         // 计算加权总分
         double totalScore = categoryScore * categoryWeight + 
                            attributeScore * attributeWeight + 
-                           intakeScore * intakeWeight;
+                           foodCombinationScore * foodCombinationWeight;
         
-        return new ObjectiveValue(name, totalScore, weight);
+        return new ObjectiveValue(getName(), totalScore, getWeight());
     }
     
     /**
@@ -185,68 +190,51 @@ public class DiversityObjective {
     }
     
     /**
-     * 评估食物摄入量均衡性
+     * 评估食物组合的合理性
      * @param genes 食物基因列表
-     * @return 摄入量均衡得分（0-1之间）
+     * @return 食物组合合理性得分（0-1之间）
      */
-    private double evaluateIntakeBalance(List<FoodGene> genes) {
-        if (genes.size() <= 1) {
-            return 0.5; // 单一食物，给予中等分数
-        }
+    private double evaluateFoodCombination(List<FoodGene> genes) {
+        boolean hasStaple = false;
+        boolean hasVegetable = false;
+        boolean hasProteinSource = false;
         
-        // 计算每种食物摄入量占总摄入量的比例
-        double totalIntake = 0;
         for (FoodGene gene : genes) {
-            totalIntake += gene.getIntake();
+            FoodCategory category = gene.getFood().getCategory();
+            
+            if (FoodCategory.STAPLE.equals(category)) {
+                hasStaple = true;
+            } else if (FoodCategory.VEGETABLE.equals(category)) {
+                hasVegetable = true;
+            } else if (FoodCategory.MEAT.equals(category) || FoodCategory.FISH.equals(category) || 
+                       FoodCategory.EGG.equals(category) || FoodCategory.BEAN.equals(category)) {
+                hasProteinSource = true;
+            }
         }
         
-        if (totalIntake == 0) {
-            return 0;
-        }
+        // 基础得分：是否包含基本营养成分
+        double baseScore = 0;
+        if (hasStaple) baseScore += 0.3;
+        if (hasVegetable) baseScore += 0.3;
+        if (hasProteinSource) baseScore += 0.3;
         
-        List<Double> intakeRatios = new ArrayList<>();
+        // 检查类别平衡性
+        double balanceScore = 0;
+        Map<FoodCategory, Integer> categoryCount = new HashMap<>();
         for (FoodGene gene : genes) {
-            intakeRatios.add(gene.getIntake() / totalIntake);
+            FoodCategory category = gene.getFood().getCategory();
+            categoryCount.put(category, categoryCount.getOrDefault(category, 0) + 1);
         }
         
-        // 计算摄入量比例的标准差
-        double mean = 1.0 / genes.size(); // 理想的平均分布
-        double sumSquaredDiff = 0;
-        
-        for (double ratio : intakeRatios) {
-            sumSquaredDiff += Math.pow(ratio - mean, 2);
+        for (Map.Entry<FoodCategory, Integer> entry : categoryCount.entrySet()) {
+            if (entry.getValue() > 3) {
+                // 扣分：某一类别食物过多
+                balanceScore -= 0.05 * (entry.getValue() - 3);
+            }
         }
         
-        double standardDeviation = Math.sqrt(sumSquaredDiff / genes.size());
-        
-        // 标准差越小，均衡性越好
-        double balanceScore = 1.0 - Math.min(1, standardDeviation * 3);
-        
-        return balanceScore;
-    }
-    
-    /**
-     * 获取目标名称
-     * @return 目标名称
-     */
-    public String getName() {
-        return name;
-    }
-    
-    /**
-     * 获取目标权重
-     * @return 目标权重
-     */
-    public double getWeight() {
-        return weight;
-    }
-    
-    /**
-     * 设置目标权重
-     * @param weight 目标权重
-     */
-    public void setWeight(double weight) {
-        this.weight = weight;
+        // 总分
+        return Math.max(0, Math.min(1, baseScore + balanceScore));
     }
     
     /**
@@ -263,6 +251,11 @@ public class DiversityObjective {
      */
     public void setCategoryWeight(double categoryWeight) {
         this.categoryWeight = categoryWeight;
+        // 调整其他权重，确保总和为1
+        double remainingWeight = 1 - categoryWeight;
+        double ratio = attributeWeight / (attributeWeight + foodCombinationWeight);
+        this.attributeWeight = remainingWeight * ratio;
+        this.foodCombinationWeight = remainingWeight * (1 - ratio);
     }
     
     /**
@@ -279,22 +272,32 @@ public class DiversityObjective {
      */
     public void setAttributeWeight(double attributeWeight) {
         this.attributeWeight = attributeWeight;
+        // 调整其他权重，确保总和为1
+        double remainingWeight = 1 - attributeWeight;
+        double ratio = categoryWeight / (categoryWeight + foodCombinationWeight);
+        this.categoryWeight = remainingWeight * ratio;
+        this.foodCombinationWeight = remainingWeight * (1 - ratio);
     }
     
     /**
-     * 获取摄入量均衡权重
-     * @return 摄入量均衡权重
+     * 获取食物组合合理性权重
+     * @return 食物组合合理性权重
      */
-    public double getIntakeWeight() {
-        return intakeWeight;
+    public double getFoodCombinationWeight() {
+        return foodCombinationWeight;
     }
     
     /**
-     * 设置摄入量均衡权重
-     * @param intakeWeight 摄入量均衡权重
+     * 设置食物组合合理性权重
+     * @param foodCombinationWeight 食物组合合理性权重
      */
-    public void setIntakeWeight(double intakeWeight) {
-        this.intakeWeight = intakeWeight;
+    public void setFoodCombinationWeight(double foodCombinationWeight) {
+        this.foodCombinationWeight = foodCombinationWeight;
+        // 调整其他权重，确保总和为1
+        double remainingWeight = 1 - foodCombinationWeight;
+        double ratio = categoryWeight / (categoryWeight + attributeWeight);
+        this.categoryWeight = remainingWeight * ratio;
+        this.attributeWeight = remainingWeight * (1 - ratio);
     }
     
     /**
@@ -332,20 +335,13 @@ public class DiversityObjective {
         this.categoryCoverageWeight = coverageWeight;
         
         // 修改类别多样性在总体多样性中的权重
-        this.categoryWeight = categoryWeight;
-        
-        // 确保所有权重总和不变
-        double remainingWeight = 1 - categoryWeight - intakeWeight;
-        if (remainingWeight < 0) {
-            throw new IllegalArgumentException("权重总和不能超过1");
-        }
-        this.attributeWeight = remainingWeight;
+        setCategoryWeight(categoryWeight);
         
         System.out.println("已调整类别分布权重：");
         System.out.println("- 类别分布在类别多样性中的权重: " + categoryDistributionWeight);
         System.out.println("- 类别覆盖率在类别多样性中的权重: " + coverageWeight);
         System.out.println("- 类别多样性在总体多样性中的权重: " + categoryWeight);
         System.out.println("- 食物特性多样性在总体多样性中的权重: " + attributeWeight);
-        System.out.println("- 摄入量均衡在总体多样性中的权重: " + intakeWeight);
+        System.out.println("- 食物组合合理性在总体多样性中的权重: " + foodCombinationWeight);
     }
 } 

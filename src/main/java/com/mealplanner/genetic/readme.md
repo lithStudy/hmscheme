@@ -1,4 +1,3 @@
-
 com.mealplanner.genetic/
 ├── algorithm/          // 核心算法组件
 │   ├── NSGAIIMealPlanner.java      // 主算法控制类
@@ -18,7 +17,8 @@ com.mealplanner.genetic/
 │   ├── PreferenceObjective.java    // 用户偏好目标
 │   ├── DiversityObjective.java     // 多样性目标
 │   ├── BalanceObjective.java       // 餐食平衡目标
-│   └── ObjectiveEvaluator.java     // 目标评价器
+│   ├── AbstractObjectiveEvaluator.java    // 目标评价器抽象类
+│   └── MultiObjectiveEvaluator.java // 多目标评价器
 └── util/               // 辅助工具
     ├── NSGAIIConfiguration.java    // 算法配置
     └── NSGAIILogger.java           // 算法日志

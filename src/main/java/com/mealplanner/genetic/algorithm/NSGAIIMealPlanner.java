@@ -2,7 +2,7 @@ package com.mealplanner.genetic.algorithm;
 
 import com.mealplanner.genetic.model.MealSolution;
 import com.mealplanner.genetic.model.ObjectiveValue;
-import com.mealplanner.genetic.objectives.ObjectiveEvaluator;
+import com.mealplanner.genetic.objectives.MultiObjectiveEvaluator;
 import com.mealplanner.genetic.operators.MealCrossover;
 import com.mealplanner.genetic.operators.MealMutation;
 import com.mealplanner.genetic.operators.MealSelection;
@@ -34,7 +34,7 @@ public class NSGAIIMealPlanner {
     // 用户个人信息
     private UserProfile userProfile;
     // 目标评估器,用于评估解决方案的各项目标值
-    private ObjectiveEvaluator objectiveEvaluator;
+    private MultiObjectiveEvaluator objectiveEvaluator;
     // 交叉算子,用于生成新的解决方案
     private MealCrossover crossover;
     // 变异算子,用于增加解的多样性
@@ -60,7 +60,7 @@ public class NSGAIIMealPlanner {
         this.config = config;
         this.foodDatabase = foodDatabase;
         this.userProfile = userProfile;
-        this.objectiveEvaluator = new ObjectiveEvaluator(userProfile);
+        this.objectiveEvaluator = new MultiObjectiveEvaluator(userProfile);
         this.crossover = new MealCrossover(config.getCrossoverRate());
         this.mutation = new MealMutation(config.getMutationRate(), foodDatabase);
         this.selection = new MealSelection();

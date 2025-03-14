@@ -2,20 +2,22 @@ package com.mealplanner.genetic.objectives;
 
 import com.mealplanner.genetic.model.MealSolution;
 import com.mealplanner.genetic.model.ObjectiveValue;
+import com.mealplanner.model.HealthConditionType;
 import com.mealplanner.model.Nutrition;
+import com.mealplanner.model.NutrientType;
+import com.mealplanner.model.UserProfile;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 营养素目标类，评估解决方案在特定营养素上的表现
  */
-public class NutrientObjective {
-    // 目标名称
-    private String name;
-    
-    // 对应的营养素名称
-    private String nutrientName;
-    
-    // 目标权重
-    private double weight;
+public class NutrientObjective extends AbstractObjectiveEvaluator {
+    // 对应的营养素类型
+    private NutrientType nutrientType;
     
     // 营养素评分方式（是否惩罚过量）
     private boolean penalizeExcess; 
@@ -29,48 +31,96 @@ public class NutrientObjective {
     /**
      * 构造函数
      * @param name 目标名称
-     * @param nutrientName 营养素名称
+     * @param nutrientType 营养素类型
      * @param weight 目标权重
      * @param penalizeExcess 是否惩罚过量
      */
-    public NutrientObjective(String name, String nutrientName, double weight, boolean penalizeExcess) {
-        this.name = name;
-        this.nutrientName = nutrientName;
-        this.weight = weight;
+    public NutrientObjective(String name, NutrientType nutrientType, double weight, boolean penalizeExcess) {
+        super(name, weight);
+        this.nutrientType = nutrientType;
         this.penalizeExcess = penalizeExcess;
     }
 
-    public NutrientObjective(String name, String nutrientName, double weight, boolean penalizeExcess, double deviationTolerance, double hardConstraintThreshold) {
-        this.name = name;
-        this.nutrientName = nutrientName;
-        this.weight = weight;
+    /**
+     * 构造函数
+     * @param name 目标名称
+     * @param nutrientType 营养素类型
+     * @param weight 目标权重
+     * @param penalizeExcess 是否惩罚过量
+     * @param deviationTolerance 偏差容忍度
+     * @param hardConstraintThreshold 硬性约束阈值
+     */
+    public NutrientObjective(String name, NutrientType nutrientType, double weight, boolean penalizeExcess, double deviationTolerance, double hardConstraintThreshold) {
+        super(name, weight);
+        this.nutrientType = nutrientType;
         this.penalizeExcess = penalizeExcess;
         this.deviationTolerance = deviationTolerance;
         this.hardConstraintThreshold = hardConstraintThreshold;
     }
     
     /**
-     * 评估解决方案在该营养素目标上的表现
+     * 创建标准营养素目标列表
+     * @param userProfile 用户档案
+     * @return 营养素目标列表
+     */
+    public static List<NutrientObjective> createStandardNutrientObjectives(UserProfile userProfile) {
+        List<NutrientObjective> nutrientObjectives = new ArrayList<>();
+        
+        // 获取营养素权重
+        Map<NutrientType, Double> nutrientWeights = NutrientType.getNutrientWeights(userProfile);
+        
+        // 初始化营养素目标
+        // 热量目标，使用更严格的参数
+        nutrientObjectives.add(new NutrientObjective(
+                NutrientType.CALORIES.getName() + "_objective", 
+                NutrientType.CALORIES, 
+                nutrientWeights.get(NutrientType.CALORIES), 
+                NutrientType.CALORIES.isDefaultPenalizeExcess(), 
+                0.05, 0.9));
+        
+        // 添加其他营养素目标
+        for (NutrientType type : NutrientType.values()) {
+            if (type != NutrientType.CALORIES) { // 热量已经单独处理
+                nutrientObjectives.add(new NutrientObjective(
+                        type.getName() + "_objective",
+                        type,
+                        nutrientWeights.get(type),
+                        type.isDefaultPenalizeExcess()));
+            }
+        }
+        
+        return nutrientObjectives;
+    }
+    
+    /**
+     * 实现AbstractObjectiveEvaluator抽象类的evaluate方法
+     * @param solution 解决方案
+     * @param targetNutrients 目标营养素
+     * @return 目标值
+     */
+    @Override
+    public ObjectiveValue evaluate(MealSolution solution, Nutrition targetNutrients) {
+        Nutrition actualNutrients = solution.calculateTotalNutrients();
+        return evaluate(solution, actualNutrients, targetNutrients);
+    }
+    
+    /**
+     * 评估解决方案在特定营养素上的表现
      * @param solution 解决方案
      * @param actualNutrients 实际营养素
      * @param targetNutrients 目标营养素
      * @return 目标值
      */
     public ObjectiveValue evaluate(MealSolution solution, Nutrition actualNutrients, Nutrition targetNutrients) {
-        double actualValue = getNutrientValue(actualNutrients);
-        double targetValue = getNutrientValue(targetNutrients);
+        // 获取实际和目标营养素值
+        double actual = getNutrientValue(actualNutrients);
+        double target = getNutrientValue(targetNutrients);
         
-        // 计算营养素匹配度评分
-        double score = calculateNutrientScore(actualValue, targetValue);
+        // 计算营养素得分
+        double score = calculateNutrientScore(actual, target);
         
-        // 创建目标值对象
-        return new ObjectiveValue(
-                name,
-                score,
-                weight,
-                true, // 作为硬性约束
-                hardConstraintThreshold
-        );
+        // 创建目标值对象，使用带硬性约束的构造函数
+        return new ObjectiveValue(getName(), score, getWeight(), true, hardConstraintThreshold);
     }
     
     /**
@@ -79,23 +129,31 @@ public class NutrientObjective {
      * @return 营养素值
      */
     private double getNutrientValue(Nutrition nutrients) {
-        switch (nutrientName.toLowerCase()) {
-            case "calories":
+        if (nutrientType == null) {
+            return 0;
+        }
+        
+        switch (nutrientType) {
+            case CALORIES:
                 return nutrients.getCalories();
-            case "carbohydrates":
+            case CARBOHYDRATES:
                 return nutrients.getCarbohydrates();
-            case "protein":
+            case PROTEIN:
                 return nutrients.getProtein();
-            case "fat":
+            case FAT:
                 return nutrients.getFat();
-            case "calcium":
+            case CALCIUM:
                 return nutrients.getCalcium();
-            case "potassium":
+            case POTASSIUM:
                 return nutrients.getPotassium();
-            case "sodium":
+            case SODIUM:
                 return nutrients.getSodium();
-            case "magnesium":
+            case MAGNESIUM:
                 return nutrients.getMagnesium();
+            case IRON:
+                return nutrients.getIron();
+            case PHOSPHORUS:
+                return nutrients.getPhosphorus();
             default:
                 return 0;
         }
@@ -127,7 +185,7 @@ public class NutrientObjective {
         
         // 对热量不足的惩罚更严厉
         if (ratio < 1.0) {
-            if ("calories".equals(nutrientName)) {
+            if (nutrientType == NutrientType.CALORIES) {
                 // 热量不足：更快速地减少分数
                 return Math.max(0, 0.8 - (1.0 - ratio - deviationTolerance) * 3);
             } else {
@@ -144,19 +202,19 @@ public class NutrientObjective {
     }
     
     /**
-     * 获取目标名称
-     * @return 目标名称
+     * 获取营养素类型
+     * @return 营养素类型
      */
-    public String getName() {
-        return name;
+    public NutrientType getNutrientType() {
+        return nutrientType;
     }
     
     /**
-     * 设置目标名称
-     * @param name 目标名称
+     * 设置营养素类型
+     * @param nutrientType 营养素类型
      */
-    public void setName(String name) {
-        this.name = name;
+    public void setNutrientType(NutrientType nutrientType) {
+        this.nutrientType = nutrientType;
     }
     
     /**
@@ -164,31 +222,7 @@ public class NutrientObjective {
      * @return 营养素名称
      */
     public String getNutrientName() {
-        return nutrientName;
-    }
-    
-    /**
-     * 设置营养素名称
-     * @param nutrientName 营养素名称
-     */
-    public void setNutrientName(String nutrientName) {
-        this.nutrientName = nutrientName;
-    }
-    
-    /**
-     * 获取目标权重
-     * @return 目标权重
-     */
-    public double getWeight() {
-        return weight;
-    }
-    
-    /**
-     * 设置目标权重
-     * @param weight 目标权重
-     */
-    public void setWeight(double weight) {
-        this.weight = weight;
+        return nutrientType != null ? nutrientType.getName() : null;
     }
     
     /**
