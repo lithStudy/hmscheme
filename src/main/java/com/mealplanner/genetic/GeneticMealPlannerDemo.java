@@ -2,6 +2,7 @@ package com.mealplanner.genetic;
 
 
 import com.mealplanner.NutritionCalculator;
+import com.mealplanner.export.MealSolutionExcelExporter;
 import com.mealplanner.foodmanage.NutritionDataParser;
 import com.mealplanner.genetic.algorithm.NSGAIIMealPlanner;
 import com.mealplanner.genetic.model.FoodGene;
@@ -13,8 +14,11 @@ import com.mealplanner.model.Food;
 import com.mealplanner.model.Nutrition;
 import com.mealplanner.model.UserProfile;
 
+import java.io.File;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Scanner;
 
@@ -58,11 +62,14 @@ public class GeneticMealPlannerDemo {
         System.out.println("\n开始执行NSGA-II多目标遗传算法...");
         List<MealSolution> solutions = planner.generateMeal(targetNutrients, true);
         
+        //导出到excel
+        MealSolutionExcelExporter.export(solutions, targetNutrients);
+        
         // 显示结果
         displayResults(solutions, targetNutrients, planner);
         
         // 交互式展示选定的解决方案
-        interactiveResultsDisplay(solutions, targetNutrients, planner);
+        // interactiveResultsDisplay(solutions, targetNutrients, planner);
     }
     
     /**

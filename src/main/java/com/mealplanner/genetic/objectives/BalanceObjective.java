@@ -15,7 +15,7 @@ public class BalanceObjective {
     private final String name = "balance_objective";
     
     // 目标权重
-    private double weight;
+    private double weight=0.2;
     
     // 宏量营养素比例权重
     private double macroRatioWeight = 0.5;
@@ -27,8 +27,8 @@ public class BalanceObjective {
     private double intakeRationalityWeight = 0.2;
     
     // 理想的宏量营养素比例
-    private double idealCarbPercentage = 0.55; // 碳水占55%
-    private double idealProteinPercentage = 0.20; // 蛋白质占20%
+    private double idealCarbPercentage = 0.60; // 碳水占60%
+    private double idealProteinPercentage = 0.15; // 蛋白质占15%
     private double idealFatPercentage = 0.25; // 脂肪占25%
     
     // // 摄入量合理性评估的基准值
@@ -38,7 +38,6 @@ public class BalanceObjective {
      * 构造函数
      */
     public BalanceObjective() {
-        this.weight = 0.2; // 默认权重
     }
     
     /**
