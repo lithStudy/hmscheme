@@ -14,11 +14,8 @@ import com.mealplanner.model.Food;
 import com.mealplanner.model.Nutrition;
 import com.mealplanner.model.UserProfile;
 
-import java.io.File;
 import java.io.IOException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
@@ -67,9 +64,6 @@ public class GeneticMealPlannerDemo {
         
         // 显示结果
         displayResults(solutions, targetNutrients, planner);
-        
-        // 交互式展示选定的解决方案
-        // interactiveResultsDisplay(solutions, targetNutrients, planner);
     }
     
     /**
