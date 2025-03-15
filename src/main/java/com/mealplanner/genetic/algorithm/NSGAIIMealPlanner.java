@@ -308,25 +308,27 @@ public class NSGAIIMealPlanner {
         if (filteredSolutions.isEmpty()) {
             logger.warning("没有解决方案满足所有营养素达成率的要求");
             
-            // 按照营养素偏离度升序排序所有解决方案（偏离度越低越好）
+            // 按照热量和主要营养素（碳水、蛋白质、脂肪）偏离度升序排序所有解决方案（偏离度越低越好）
             List<MealSolution> sortedSolutions = allParetoFront.stream()
                     .sorted(Comparator.comparing(
-                        solution -> calculateNutrientDeviationScore(solution, targetNutrients)))
+                        solution -> calculateMainNutrientsDeviationScore(solution, targetNutrients)))
                     .collect(Collectors.toList());
             
             // 选择前三个解决方案（如果有的话）
             int topCount = Math.min(3, sortedSolutions.size());
             if (topCount > 0) {
-                logger.info("选择营养素偏离度最低的" + topCount + "个解决方案作为替代");
+                logger.info("选择热量和主要营养素偏离度最低的" + topCount + "个解决方案作为替代");
                 filteredSolutions.addAll(sortedSolutions.subList(0, topCount));
                 
                 // 记录每个选中方案的营养素偏离度和平均达成率
                 for (int i = 0; i < topCount; i++) {
                     MealSolution solution = sortedSolutions.get(i);
-                    double deviationScore = calculateNutrientDeviationScore(solution, targetNutrients);
+                    double mainDeviationScore = calculateMainNutrientsDeviationScore(solution, targetNutrients);
+                    double overallDeviationScore = calculateNutrientDeviationScore(solution, targetNutrients);
                     double achievementScore = calculateAverageNutrientAchievement(solution, targetNutrients);
                     logger.info("替代方案 #" + (i+1) + 
-                               " 营养素偏离度: " + String.format("%.4f", deviationScore) + 
+                               " 热量及主要营养素偏离度: " + String.format("%.4f", mainDeviationScore) +
+                               ", 整体营养素偏离度: " + String.format("%.4f", overallDeviationScore) + 
                                ", 平均营养素达成率: " + String.format("%.2f", achievementScore));
                 }
             }
@@ -641,5 +643,79 @@ public class NSGAIIMealPlanner {
                 .collect(Collectors.toList());
         
         logger.logGeneration(generation, population, firstFront);
+    }
+    
+    /**
+     * 计算解决方案的热量和主要营养素（碳水、蛋白质、脂肪）偏离得分
+     * 此方法专注于评估解决方案对热量和三大主要营养素的达成情况
+     * @param solution 解决方案
+     * @param targetNutrients 目标营养素
+     * @return 热量和主要营养素偏离得分（越低越好）
+     */
+    private double calculateMainNutrientsDeviationScore(MealSolution solution, Nutrition targetNutrients) {
+        Nutrition actualNutrients = solution.calculateTotalNutrients();
+        Map<String, Double> nutrientDeviations = new HashMap<>();
+        
+        // 分配权重，热量权重较高
+        double caloriesWeight = 1.2;  // 热量有更高的权重
+        double carbsWeight = 1.0;
+        double proteinWeight = 1.0;
+        double fatWeight = 1.0;
+        
+        // 计算热量的偏离度
+        if (targetNutrients.calories > 0) {
+            double ratio = actualNutrients.calories / targetNutrients.calories;
+            double[] range = getNutrientAchievementRate("calories");
+            double deviation = calculateDeviationFromRange(ratio, range[0], range[1]) * caloriesWeight;
+            nutrientDeviations.put("calories", deviation);
+        }
+        
+        // 计算碳水化合物的偏离度
+        if (targetNutrients.carbohydrates > 0) {
+            double ratio = actualNutrients.carbohydrates / targetNutrients.carbohydrates;
+            double[] range = getNutrientAchievementRate("carbohydrates");
+            double deviation = calculateDeviationFromRange(ratio, range[0], range[1]) * carbsWeight;
+            nutrientDeviations.put("carbohydrates", deviation);
+        }
+        
+        // 计算蛋白质的偏离度
+        if (targetNutrients.protein > 0) {
+            double ratio = actualNutrients.protein / targetNutrients.protein;
+            double[] range = getNutrientAchievementRate("protein");
+            double deviation = calculateDeviationFromRange(ratio, range[0], range[1]) * proteinWeight;
+            nutrientDeviations.put("protein", deviation);
+        }
+        
+        // 计算脂肪的偏离度
+        if (targetNutrients.fat > 0) {
+            double ratio = actualNutrients.fat / targetNutrients.fat;
+            double[] range = getNutrientAchievementRate("fat");
+            double deviation = calculateDeviationFromRange(ratio, range[0], range[1]) * fatWeight;
+            nutrientDeviations.put("fat", deviation);
+        }
+        
+        // 计算加权平均偏离度
+        double totalDeviation = 0;
+        double totalWeight = 0;
+        
+        for (String nutrient : nutrientDeviations.keySet()) {
+            double deviation = nutrientDeviations.get(nutrient);
+            double weight = 1.0;
+            
+            if (nutrient.equals("calories")) {
+                weight = caloriesWeight;
+            } else if (nutrient.equals("carbohydrates")) {
+                weight = carbsWeight;
+            } else if (nutrient.equals("protein")) {
+                weight = proteinWeight;
+            } else if (nutrient.equals("fat")) {
+                weight = fatWeight;
+            }
+            
+            totalDeviation += deviation * weight;
+            totalWeight += weight;
+        }
+        
+        return nutrientDeviations.isEmpty() ? 0 : totalDeviation / totalWeight;
     }
 } 

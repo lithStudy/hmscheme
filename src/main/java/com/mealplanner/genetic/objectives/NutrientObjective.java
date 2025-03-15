@@ -2,13 +2,11 @@ package com.mealplanner.genetic.objectives;
 
 import com.mealplanner.genetic.model.MealSolution;
 import com.mealplanner.genetic.model.ObjectiveValue;
-import com.mealplanner.model.HealthConditionType;
 import com.mealplanner.model.Nutrition;
 import com.mealplanner.model.NutrientType;
 import com.mealplanner.model.UserProfile;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 

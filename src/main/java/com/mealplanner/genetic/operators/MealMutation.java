@@ -72,53 +72,92 @@ public class MealMutation {
     }
     
     /**
-     * 对解决方案应用变异操作
-     * @param solution 待变异的解决方案
-     * @param requireStaple 是否需要保留主食
-     * @param targetCalories 目标热量（用于热量优化）
-     * @return 是否发生了变异
+     * 应用变异操作
+     * @param solution 解决方案
+     * @param requireStaple 是否需要主食
+     * @param targetCalories 目标热量
+     * @return 是否成功应用变异
      */
     public boolean apply(MealSolution solution, boolean requireStaple, double targetCalories) {
-        // 如果随机值大于变异率，不执行变异
-        if (Math.random() > mutationRate) {
+        if (solution == null) {
             return false;
         }
         
-        // 根据变异类型执行不同的变异操作
+        Random random = new Random();
+        boolean mutated = false;
+        
+        // 根据变异类型应用不同的变异策略
         switch (mutationType) {
             case INTAKE_ADJUSTMENT:
-                return mutateIntake(solution);
+                if (random.nextDouble() < mutationRate) {
+                    mutated = mutateIntake(solution);
+                }
+                break;
+                
             case FOOD_REPLACEMENT:
-                return mutateReplaceFood(solution, requireStaple);
+                if (random.nextDouble() < mutationRate) {
+                    mutated = mutateReplaceFood(solution, requireStaple);
+                }
+                break;
+                
             case FOOD_ADDITION:
-                return mutateAddFood(solution);
+                if (random.nextDouble() < mutationRate) {
+                    mutated = mutateAddFood(solution, requireStaple);
+                }
+                break;
+                
             case FOOD_REMOVAL:
-                return mutateRemoveFood(solution, requireStaple);
+                if (random.nextDouble() < mutationRate) {
+                    mutated = mutateRemoveFood(solution, requireStaple);
+                }
+                break;
+                
             case CALORIES_OPTIMIZATION:
-                return mutateOptimizeCalories(solution, targetCalories);
+                if (random.nextDouble() < mutationRate) {
+                    mutated = mutateOptimizeCalories(solution, targetCalories);
+                }
+                break;
+                
             case NUTRIENT_SENSITIVITY:
-                return mutateByNutrientSensitivity(solution, requireStaple);
+                if (random.nextDouble() < mutationRate) {
+                    mutated = mutateByNutrientSensitivity(solution, requireStaple);
+                }
+                break;
+                
             case COMPREHENSIVE:
             default:
-                // 随机选择一种变异类型，但给敏感度分析更高的概率
-                Random random = new Random();
+                // 综合变异：随机选择一种变异类型
                 double r = random.nextDouble();
-                
-                // 给敏感度分析和热量优化更高的概率（各30%），其他类型各10%
-                if (r < 0.3) {
-                    return mutateByNutrientSensitivity(solution, requireStaple);
-                } else if (r < 0.6) {
-                    return mutateOptimizeCalories(solution, targetCalories);
-                } else if (r < 0.7) {
-                    return mutateIntake(solution);
-                } else if (r < 0.8) {
-                    return mutateReplaceFood(solution, requireStaple);
-                } else if (r < 0.9) {
-                    return mutateAddFood(solution);
-                } else {
-                    return mutateRemoveFood(solution, requireStaple);
+                if (r < mutationRate) {
+                    int mutationChoice = random.nextInt(5);
+                    switch (mutationChoice) {
+                        case 0:
+                            mutated = mutateIntake(solution);
+                            break;
+                        case 1:
+                            mutated = mutateReplaceFood(solution, requireStaple);
+                            break;
+                        case 2:
+                            mutated = mutateAddFood(solution, requireStaple);
+                            break;
+                        case 3:
+                            mutated = mutateRemoveFood(solution, requireStaple);
+                            break;
+                        case 4:
+                            mutated = mutateOptimizeCalories(solution, targetCalories);
+                            break;
+                    }
                 }
+                break;
         }
+        
+        // 确保解决方案有效
+        if (mutated && !solution.isValid(requireStaple)) {
+            // 变异导致解决方案无效，恢复到有效状态
+            ensureValidSolution(solution, requireStaple);
+        }
+        
+        return mutated;
     }
     
     /**
@@ -229,45 +268,60 @@ public class MealMutation {
     }
     
     /**
-     * 变异：添加新食物
-     * @param solution 待变异的解决方案
+     * 添加食物变异
+     * @param solution 解决方案
+     * @param requireStaple 是否需要主食
      * @return 是否成功变异
      */
-    private boolean mutateAddFood(MealSolution solution) {
-        List<FoodGene> genes = solution.getFoodGenes();
+    private boolean mutateAddFood(MealSolution solution, boolean requireStaple) {
+        Random random = new Random();
         
-        if (foodDatabase.isEmpty() || genes.size() >= 8) { // 限制最多8种食物
-            return false;
-        }
-        
-        // 获取当前解决方案中的食物名称
-        Set<String> existingFoodNames = genes.stream()
-                .map(g -> g.getFood().getName())
+        // 获取当前解决方案中的所有食物
+        Set<String> existingFoodNames = solution.getFoodGenes().stream()
+                .map(gene -> gene.getFood().getName())
                 .collect(Collectors.toSet());
         
-        // 筛选可添加的食物
+        // 获取未包含在解决方案中的候选食物
         List<Food> candidateFoods = foodDatabase.stream()
-                .filter(f -> !existingFoodNames.contains(f.getName()))
+                .filter(food -> !existingFoodNames.contains(food.getName()))
                 .collect(Collectors.toList());
         
-        if (candidateFoods.isEmpty()) {
-            return false; // 没有可添加的食物
+        // 如果requireStaple为true，且当前已有主食，则排除所有主食
+        if (requireStaple) {
+            // 检查当前是否已有主食
+            boolean hasStaple = solution.getFoodGenes().stream()
+                    .anyMatch(gene -> FoodCategory.STAPLE.equals(gene.getFood().getCategory()));
+            
+            if (hasStaple) {
+                // 已有主食，从候选食物中排除所有主食
+                candidateFoods = candidateFoods.stream()
+                        .filter(food -> !FoodCategory.STAPLE.equals(food.getCategory()))
+                        .collect(Collectors.toList());
+            } else {
+                // 没有主食，只选择主食
+                candidateFoods = candidateFoods.stream()
+                        .filter(food -> FoodCategory.STAPLE.equals(food.getCategory()))
+                        .collect(Collectors.toList());
+            }
         }
         
-        // 随机选择一个食物添加
-        Random random = new Random();
-        Food newFood = candidateFoods.get(random.nextInt(candidateFoods.size()));
+        if (candidateFoods.isEmpty()) {
+            return false; // 没有可添加的候选食物
+        }
         
-        // 为新食物生成一个在推荐范围内的摄入量
-        double minIntake = newFood.getRecommendedIntakeRange().getMinIntake();
-        double maxIntake = newFood.getRecommendedIntakeRange().getMaxIntake();
+        // 随机选择一个食物添加到解决方案中
+        Food selectedFood = candidateFoods.get(random.nextInt(candidateFoods.size()));
+        
+        // 随机生成一个在推荐范围内的摄入量
+        double minIntake = selectedFood.getRecommendedIntakeRange().getMinIntake();
+        double maxIntake = selectedFood.getRecommendedIntakeRange().getMaxIntake();
         double intake = minIntake + random.nextDouble() * (maxIntake - minIntake);
         
         // 将摄入量四舍五入为整数
         intake = Math.round(intake);
         
         // 添加新食物
-        solution.addFood(new FoodGene(newFood, intake));
+        solution.addFood(new FoodGene(selectedFood, intake));
         
         return true;
     }
@@ -452,7 +506,7 @@ public class MealMutation {
                 case 0:
                     return mutateIntake(solution);
                 case 1:
-                    return mutateAddFood(solution);
+                    return mutateAddFood(solution, requireStaple);
                 default:
                     return mutateReplaceFood(solution, requireStaple);
             }
@@ -467,7 +521,7 @@ public class MealMutation {
         
         if (adjustmentActions.isEmpty()) {
             // 如果找不到合适的调整行动，尝试添加新食物
-            return mutateAddFood(solution);
+            return mutateAddFood(solution, requireStaple);
         }
         
         // 执行调整行动
@@ -932,5 +986,68 @@ public class MealMutation {
      */
     public Nutrition getTargetNutrients() {
         return this.targetNutrients;
+    }
+    
+    /**
+     * 确保解决方案有效
+     * @param solution 解决方案
+     * @param requireStaple 是否需要主食
+     */
+    private void ensureValidSolution(MealSolution solution, boolean requireStaple) {
+        // 如果要求主食，确保有且只有一个主食
+        if (requireStaple) {
+            List<FoodGene> staples = solution.getFoodGenes().stream()
+                    .filter(gene -> FoodCategory.STAPLE.equals(gene.getFood().getCategory()))
+                    .collect(Collectors.toList());
+            
+            if (staples.isEmpty()) {
+                // 没有主食，添加一个主食
+                List<Food> stapleFoods = foodDatabase.stream()
+                        .filter(food -> FoodCategory.STAPLE.equals(food.getCategory()))
+                        .collect(Collectors.toList());
+                
+                if (!stapleFoods.isEmpty()) {
+                    Random random = new Random();
+                    Food staple = stapleFoods.get(random.nextInt(stapleFoods.size()));
+                    
+                    double minIntake = staple.getRecommendedIntakeRange().getMinIntake();
+                    double maxIntake = staple.getRecommendedIntakeRange().getMaxIntake();
+                    double intake = minIntake + random.nextDouble() * (maxIntake - minIntake);
+                    intake = Math.round(intake);
+                    
+                    solution.addFood(new FoodGene(staple, intake));
+                }
+            } else if (staples.size() > 1) {
+                // 有多个主食，只保留一个
+                Random random = new Random();
+                FoodGene keepStaple = staples.get(random.nextInt(staples.size()));
+                
+                for (FoodGene staple : staples) {
+                    if (staple != keepStaple) {
+                        // 找到该基因在解决方案中的索引并移除
+                        int index = solution.getFoodGenes().indexOf(staple);
+                        if (index >= 0) {
+                            solution.removeFood(index);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // 移除重复食物
+        Set<String> uniqueFoods = new HashSet<>();
+        List<Integer> duplicateIndices = new ArrayList<>();
+        
+        for (int i = 0; i < solution.getFoodGenes().size(); i++) {
+            FoodGene gene = solution.getFoodGenes().get(i);
+            if (!uniqueFoods.add(gene.getFood().getName())) {
+                duplicateIndices.add(i);
+            }
+        }
+        
+        // 从后向前移除重复食物（避免索引变化）
+        for (int i = duplicateIndices.size() - 1; i >= 0; i--) {
+            solution.removeFood(duplicateIndices.get(i));
+        }
     }
 }

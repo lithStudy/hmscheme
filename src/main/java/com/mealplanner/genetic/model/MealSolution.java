@@ -88,6 +88,11 @@ public class MealSolution {
         List<Food> candidateFoods = new ArrayList<>(foodDatabase);
         candidateFoods.removeAll(genes.stream().map(FoodGene::getFood).collect(Collectors.toList()));
         
+        // 如果要求主食有且只有一个，则从候选列表中移除所有主食
+        if (requireStaple) {
+            candidateFoods.removeIf(food -> FoodCategory.STAPLE.equals(food.getCategory()));
+        }
+        
         // 随机选择其余食物
         for (int i = 0; i < foodCount && !candidateFoods.isEmpty(); i++) {
             // 随机选择一个食物
@@ -135,8 +140,8 @@ public class MealSolution {
     }
     
     /**
-     * 验证解决方案是否有效
-     * @param requireStaple 是否需要主食
+     * 检查膳食解决方案是否有效
+     * @param requireStaple 是否需要包含主食
      * @return 是否有效
      */
     public boolean isValid(boolean requireStaple) {
@@ -145,12 +150,15 @@ public class MealSolution {
             return false;
         }
         
-        // 检查是否包含主食（如果需要）
+        // 检查主食
         if (requireStaple) {
-            boolean hasStaple = foodGenes.stream()
-                    .anyMatch(gene -> FoodCategory.STAPLE.equals(gene.getFood().getCategory()));
+            // 计算主食数量
+            long stapleCount = foodGenes.stream()
+                    .filter(gene -> FoodCategory.STAPLE.equals(gene.getFood().getCategory()))
+                    .count();
             
-            if (!hasStaple) {
+            // 主食必须有且只有一个
+            if (stapleCount != 1) {
                 return false;
             }
         }
