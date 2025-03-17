@@ -13,7 +13,15 @@ public abstract class AbstractObjectiveEvaluator {
     protected String name;
     
     // 目标权重
-    protected double weight;
+    protected double weight=0.2;
+    /**
+     * 构造函数
+     * @param name 目标名称
+     * @param weight 目标权重
+     */
+    public AbstractObjectiveEvaluator(String name) {
+        this.name = name;
+    }
     
     /**
      * 构造函数

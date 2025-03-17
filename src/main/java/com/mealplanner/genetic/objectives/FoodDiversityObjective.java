@@ -11,29 +11,28 @@ import java.util.*;
 /**
  * 多样性目标类，专注于评估膳食解决方案的食物多样性和食物组合合理性
  */
-public class DiversityObjective extends AbstractObjectiveEvaluator {
+public class FoodDiversityObjective extends AbstractObjectiveEvaluator {
     // 类别多样性权重
     private double categoryWeight = 0.5;
     
-    // 食物特性多样性权重
-    private double attributeWeight = 0.3;
+    // 食物特性多样性权重，暂时不考虑特性多样性
+    private double attributeWeight = 0;
     
-    // 食物组合合理性权重
+    // 食物组合合理性权重：主食、蔬菜、蛋奶等组合
     private double foodCombinationWeight = 0.2;
-    
-    // 类别分布在类别多样性中的权重
-    private double categoryDistributionWeight = 0.8;
     
     // 类别覆盖率在类别多样性中的权重
     private double categoryCoverageWeight = 0.2;
     
+    // 类别分布在类别多样性中的权重
+    private double categoryDistributionWeight = 0.8;
     // 理想的类别分布
     private Map<FoodCategory, Double> idealCategoryDistribution;
     
     /**
      * 构造函数
      */
-    public DiversityObjective() {
+    public FoodDiversityObjective() {
         super("diversity_objective", 0.2);
         initializeIdealDistribution();
     }
@@ -42,7 +41,7 @@ public class DiversityObjective extends AbstractObjectiveEvaluator {
      * 构造函数
      * @param weight 目标权重
      */
-    public DiversityObjective(double weight) {
+    public FoodDiversityObjective(double weight) {
         super("diversity_objective", weight);
         initializeIdealDistribution();
     }
@@ -84,7 +83,7 @@ public class DiversityObjective extends AbstractObjectiveEvaluator {
         if (genes.isEmpty()) {
             return new ObjectiveValue(getName(), 0.0, getWeight());
         }
-        
+
         // 计算类别多样性得分
         double categoryScore = evaluateCategoryDiversity(genes);
         

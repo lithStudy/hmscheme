@@ -44,7 +44,7 @@ public class NutrientObjective extends AbstractObjectiveEvaluator {
         this.scoringStrategy = scoringStrategy;
     }
 
-    public NutrientObjective(NutrientType nutrientType, double weight, NutrientScoringStrategy scoringStrategy, Map<NutrientType, double[]> nutrientRates) {
+    public NutrientObjective(NutrientType nutrientType, double weight, NutrientScoringStrategy scoringStrategy, Map<NutrientType, double[]> nutrientRates, double hardConstraintThreshold) {
         super(nutrientType.getName(), weight);
         this.nutrientType = nutrientType;
         this.nutrientRates = nutrientRates;

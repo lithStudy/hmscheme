@@ -3,37 +3,47 @@ package com.mealplanner.genetic.objectives;
 import com.mealplanner.genetic.model.FoodGene;
 import com.mealplanner.genetic.model.MealSolution;
 import com.mealplanner.genetic.model.ObjectiveValue;
+import com.mealplanner.model.NutrientRatio;
 import com.mealplanner.model.Nutrition;
+import com.mealplanner.model.UserProfile;
 
 import java.util.*;
 
 /**
  * 平衡目标类，专注于评估膳食解决方案的营养平衡和摄入量合理性
  */
-public class BalanceObjective extends AbstractObjectiveEvaluator {
+public class NutrientBalanceObjective extends AbstractObjectiveEvaluator {
     // 宏量营养素比例权重
     private double macroRatioWeight = 0.6;
-    
     // 摄入量合理性权重
     private double intakeRationalityWeight = 0.4;
-    
+// 综合评分：热量合理性占60%，食物摄入量合理性占40%
+    private double intakeRationalCaloriesWeight = 0.6;
+    private double intakeRationalFoodWeight = 0.4;
+
+
     // 理想的宏量营养素比例
-    private double idealCarbPercentage = 0.60; // 碳水占60%
-    private double idealProteinPercentage = 0.15; // 蛋白质占15%
-    private double idealFatPercentage = 0.25; // 脂肪占25%
+    private double idealCarbPercentage; // 碳水占60%
+    private double idealProteinPercentage; // 蛋白质占15%
+    private double idealFatPercentage; // 脂肪占25%
     
     /**
      * 构造函数
      */
-    public BalanceObjective() {
+    public NutrientBalanceObjective(UserProfile userProfile) {
         super("balance_objective", 0.2);
+
+        NutrientRatio ratio = NutrientRatio.calculateNutrientRatio(userProfile);
+        this.idealCarbPercentage = ratio.getCarbRatio();
+        this.idealProteinPercentage = ratio.getProteinRatio();
+        this.idealFatPercentage = ratio.getFatRatio();
     }
     
     /**
      * 构造函数
      * @param weight 目标权重
      */
-    public BalanceObjective(double weight) {
+    public NutrientBalanceObjective(double weight) {
         super("balance_objective", weight);
     }
     
@@ -146,8 +156,8 @@ public class BalanceObjective extends AbstractObjectiveEvaluator {
             intakeRationalityScore = 0;
         }
         
-        // 综合评分：热量合理性占60%，食物摄入量合理性占40%
-        return caloriesScore * 0.6 + intakeRationalityScore * 0.4;
+        // 综合评分：热量合理性占比，食物摄入量合理性占比
+        return caloriesScore * intakeRationalCaloriesWeight + intakeRationalityScore * intakeRationalFoodWeight;
     }
     
     /**

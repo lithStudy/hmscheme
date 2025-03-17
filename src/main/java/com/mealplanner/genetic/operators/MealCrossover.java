@@ -2,9 +2,9 @@ package com.mealplanner.genetic.operators;
 
 import com.mealplanner.genetic.model.FoodGene;
 import com.mealplanner.genetic.model.MealSolution;
+import com.mealplanner.model.FoodCategory;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * 实现膳食解决方案的交叉操作
@@ -43,289 +43,163 @@ public class MealCrossover {
     }
     
     /**
-     * 对两个父代解决方案应用交叉操作
-     * @param parent1 父代1
-     * @param parent2 父代2
-     * @return 生成的子代列表
+     * 对两个解决方案进行交叉操作
+     * @param parent1 父代解决方案1
+     * @param parent2 父代解决方案2
+     * @return 交叉操作产生的两个子代解决方案列表
      */
     public List<MealSolution> apply(MealSolution parent1, MealSolution parent2) {
-        // 如果随机值大于交叉率，不执行交叉
+        // 如果随机值大于交叉率，不执行交叉，直接返回父代的拷贝
         if (Math.random() > crossoverRate) {
-            return Arrays.asList(parent1.copy(), parent2.copy());
+            List<MealSolution> offspring = new ArrayList<>();
+            offspring.add(parent1.copy());
+            offspring.add(parent2.copy());
+            return offspring;
         }
         
-        // 根据交叉类型执行不同的交叉操作
-        switch (crossoverType) {
-            case ONE_POINT:
-                return onePointCrossover(parent1, parent2);
-            case TWO_POINT:
-                return twoPointCrossover(parent1, parent2);
-            case BLENDING:
-                return blendingCrossover(parent1, parent2);
-            case UNIFORM:
-            default:
-                return uniformCrossover(parent1, parent2);
-        }
+        // 执行交叉操作
+        return performCrossover(parent1, parent2);
     }
     
     /**
-     * 均匀交叉操作
+     * 执行交叉操作的具体实现
+     * @param parent1 父代解决方案1
+     * @param parent2 父代解决方案2
+     * @return 交叉操作产生的两个子代解决方案列表
      */
-    private List<MealSolution> uniformCrossover(MealSolution parent1, MealSolution parent2) {
-        // 创建两个子代的食物基因列表
-        List<FoodGene> child1Genes = new ArrayList<>();
-        List<FoodGene> child2Genes = new ArrayList<>();
+    private List<MealSolution> performCrossover(MealSolution parent1, MealSolution parent2) {
+        List<MealSolution> offspring = new ArrayList<>();
         
-        // 合并两个父代的所有食物
-        Set<String> allFoodNames = new HashSet<>();
-        
-        for (FoodGene gene : parent1.getFoodGenes()) {
-            allFoodNames.add(gene.getFood().getName());
-        }
-        
-        for (FoodGene gene : parent2.getFoodGenes()) {
-            allFoodNames.add(gene.getFood().getName());
-        }
-        
-        // 随机选择每种食物是否包含在子代中
-        Random random = new Random();
-        
-        for (String foodName : allFoodNames) {
-            // 从父代1中查找食物
-            Optional<FoodGene> gene1 = parent1.getFoodGenes().stream()
-                    .filter(g -> g.getFood().getName().equals(foodName))
-                    .findFirst();
-            
-            // 从父代2中查找食物
-            Optional<FoodGene> gene2 = parent2.getFoodGenes().stream()
-                    .filter(g -> g.getFood().getName().equals(foodName))
-                    .findFirst();
-            
-            // 根据随机概率决定食物是否包含在子代中
-            boolean includeInChild1 = random.nextBoolean();
-            boolean includeInChild2 = random.nextBoolean();
-            
-            // 为子代1添加食物
-            if (includeInChild1) {
-                if (gene1.isPresent()) {
-                    child1Genes.add(gene1.get().copy());
-                } else if (gene2.isPresent()) {
-                    child1Genes.add(gene2.get().copy());
-                }
-            }
-            
-            // 为子代2添加食物
-            if (includeInChild2) {
-                if (gene2.isPresent()) {
-                    child2Genes.add(gene2.get().copy());
-                } else if (gene1.isPresent()) {
-                    child2Genes.add(gene1.get().copy());
-                }
-            }
-        }
-        
-        // 创建子代解决方案
-        MealSolution child1 = new MealSolution(child1Genes);
-        MealSolution child2 = new MealSolution(child2Genes);
-        
-        return Arrays.asList(child1, child2);
-    }
-    
-    /**
-     * 单点交叉操作
-     */
-    private List<MealSolution> onePointCrossover(MealSolution parent1, MealSolution parent2) {
-        List<FoodGene> genes1 = parent1.getFoodGenes();
-        List<FoodGene> genes2 = parent2.getFoodGenes();
-        
-        if (genes1.isEmpty() || genes2.isEmpty()) {
-            return Arrays.asList(parent1.copy(), parent2.copy());
-        }
-        
-        // 选择交叉点
-        Random random = new Random();
-        int crossoverPoint1 = random.nextInt(Math.max(genes1.size(), 1));
-        int crossoverPoint2 = random.nextInt(Math.max(genes2.size(), 1));
-        
-        // 创建子代基因
-        List<FoodGene> child1Genes = new ArrayList<>();
-        List<FoodGene> child2Genes = new ArrayList<>();
-        
-        // 子代1：父代1的前半部分 + 父代2的后半部分
-        for (int i = 0; i < crossoverPoint1; i++) {
-            child1Genes.add(genes1.get(i).copy());
-        }
-        
-        for (int i = crossoverPoint2; i < genes2.size(); i++) {
-            // 避免重复食物
-            final int index = i;  // 创建一个不可变的副本
-            if (child1Genes.stream().noneMatch(g -> g.getFood().getName().equals(genes2.get(index).getFood().getName()))) {
-                child1Genes.add(genes2.get(index).copy());
-            }
-        }
-        
-        // 子代2：父代2的前半部分 + 父代1的后半部分
-        for (int i = 0; i < crossoverPoint2; i++) {
-            child2Genes.add(genes2.get(i).copy());
-        }
-        
-        for (int i = crossoverPoint1; i < genes1.size(); i++) {
-            // 避免重复食物
-            final int index = i;  // 创建一个不可变的副本
-            if (child2Genes.stream().noneMatch(g -> g.getFood().getName().equals(genes1.get(index).getFood().getName()))) {
-                child2Genes.add(genes1.get(index).copy());
-            }
-        }
-        
-        return Arrays.asList(new MealSolution(child1Genes), new MealSolution(child2Genes));
-    }
-    
-    /**
-     * 两点交叉操作
-     */
-    private List<MealSolution> twoPointCrossover(MealSolution parent1, MealSolution parent2) {
-        List<FoodGene> genes1 = parent1.getFoodGenes();
-        List<FoodGene> genes2 = parent2.getFoodGenes();
-        
-        if (genes1.size() < 2 || genes2.size() < 2) {
-            return onePointCrossover(parent1, parent2);
-        }
-        
-        // 选择两个交叉点
-        Random random = new Random();
-        int point1Parent1 = random.nextInt(genes1.size() - 1);
-        int point2Parent1 = point1Parent1 + 1 + random.nextInt(genes1.size() - point1Parent1 - 1);
-        
-        int point1Parent2 = random.nextInt(genes2.size() - 1);
-        int point2Parent2 = point1Parent2 + 1 + random.nextInt(genes2.size() - point1Parent2 - 1);
-        
-        // 创建子代基因
-        List<FoodGene> child1Genes = new ArrayList<>();
-        List<FoodGene> child2Genes = new ArrayList<>();
-        
-        // 子代1：父代1的开始和结束部分 + 父代2的中间部分
-        // 第一段：父代1的开始到第一个交叉点
-        for (int i = 0; i < point1Parent1; i++) {
-            child1Genes.add(genes1.get(i).copy());
-        }
-        
-        // 第二段：父代2的第一个到第二个交叉点
-        for (int i = point1Parent2; i < point2Parent2; i++) {
-            // 避免重复食物
-            final int index = i;  // 创建一个不可变的副本
-            if (child1Genes.stream().noneMatch(g -> g.getFood().getName().equals(genes2.get(index).getFood().getName()))) {
-                child1Genes.add(genes2.get(index).copy());
-            }
-        }
-        
-        // 第三段：父代1的第二个交叉点到结束
-        for (int i = point2Parent1; i < genes1.size(); i++) {
-            // 避免重复食物
-            final int index = i;  // 创建一个不可变的副本
-            if (child1Genes.stream().noneMatch(g -> g.getFood().getName().equals(genes1.get(index).getFood().getName()))) {
-                child1Genes.add(genes1.get(index).copy());
-            }
-        }
-        
-        // 子代2：父代2的开始和结束部分 + 父代1的中间部分
-        // 第一段：父代2的开始到第一个交叉点
-        for (int i = 0; i < point1Parent2; i++) {
-            child2Genes.add(genes2.get(i).copy());
-        }
-        
-        // 第二段：父代1的第一个到第二个交叉点
-        for (int i = point1Parent1; i < point2Parent1; i++) {
-            // 避免重复食物
-            final int index = i;  // 创建一个不可变的副本
-            if (child2Genes.stream().noneMatch(g -> g.getFood().getName().equals(genes1.get(index).getFood().getName()))) {
-                child2Genes.add(genes1.get(index).copy());
-            }
-        }
-        
-        // 第三段：父代2的第二个交叉点到结束
-        for (int i = point2Parent2; i < genes2.size(); i++) {
-            // 避免重复食物
-            final int index = i;  // 创建一个不可变的副本
-            if (child2Genes.stream().noneMatch(g -> g.getFood().getName().equals(genes2.get(index).getFood().getName()))) {
-                child2Genes.add(genes2.get(index).copy());
-            }
-        }
-        
-        return Arrays.asList(new MealSolution(child1Genes), new MealSolution(child2Genes));
-    }
-    
-    /**
-     * 混合交叉操作（针对摄入量）
-     */
-    private List<MealSolution> blendingCrossover(MealSolution parent1, MealSolution parent2) {
         // 创建两个子代的基因列表
         List<FoodGene> child1Genes = new ArrayList<>();
         List<FoodGene> child2Genes = new ArrayList<>();
         
-        // 获取两个父代的共同食物
-        Map<String, FoodGene> parent1Map = parent1.getFoodGenes().stream()
-                .collect(Collectors.toMap(gene -> gene.getFood().getName(), gene -> gene));
+        // 分别获取父代的主食和非主食基因
+        List<FoodGene> parent1Staples = new ArrayList<>();
+        List<FoodGene> parent1NonStaples = new ArrayList<>();
+        List<FoodGene> parent2Staples = new ArrayList<>();
+        List<FoodGene> parent2NonStaples = new ArrayList<>();
         
-        Map<String, FoodGene> parent2Map = parent2.getFoodGenes().stream()
-                .collect(Collectors.toMap(gene -> gene.getFood().getName(), gene -> gene));
-        
-        Set<String> commonFoods = new HashSet<>(parent1Map.keySet());
-        commonFoods.retainAll(parent2Map.keySet());
-        
-        // 处理共同食物：混合摄入量
-        for (String foodName : commonFoods) {
-            FoodGene gene1 = parent1Map.get(foodName);
-            FoodGene gene2 = parent2Map.get(foodName);
-            
-            double intake1 = gene1.getIntake();
-            double intake2 = gene2.getIntake();
-            
-            // 混合系数
-            double alpha = 0.3; // 可以调整这个参数
-            
-            // 计算混合后的摄入量
-            double blendedIntake1 = intake1 * (1 - alpha) + intake2 * alpha;
-            double blendedIntake2 = intake2 * (1 - alpha) + intake1 * alpha;
-            
-            // 将混合后的摄入量四舍五入为整数
-            blendedIntake1 = Math.round(blendedIntake1);
-            blendedIntake2 = Math.round(blendedIntake2);
-            
-            // 创建新的基因
-            child1Genes.add(new FoodGene(gene1.getFood(), blendedIntake1));
-            child2Genes.add(new FoodGene(gene2.getFood(), blendedIntake2));
+        // 分类父代1的基因
+        for (FoodGene gene : parent1.getFoodGenes()) {
+            if (FoodCategory.STAPLE.equals(gene.getFood().getCategory())) {
+                parent1Staples.add(gene);
+            } else {
+                parent1NonStaples.add(gene);
+            }
         }
         
-        // 获取父代1独有的食物
-        Set<String> parent1Only = new HashSet<>(parent1Map.keySet());
-        parent1Only.removeAll(commonFoods);
+        // 分类父代2的基因
+        for (FoodGene gene : parent2.getFoodGenes()) {
+            if (FoodCategory.STAPLE.equals(gene.getFood().getCategory())) {
+                parent2Staples.add(gene);
+            } else {
+                parent2NonStaples.add(gene);
+            }
+        }
         
-        // 获取父代2独有的食物
-        Set<String> parent2Only = new HashSet<>(parent2Map.keySet());
-        parent2Only.removeAll(commonFoods);
-        
-        // 随机决定独有食物的分配
+        // 随机决定主食的交叉方式
         Random random = new Random();
         
-        for (String foodName : parent1Only) {
-            FoodGene gene = parent1Map.get(foodName);
+        // 确保每个子代有且只有一个主食
+        if (!parent1Staples.isEmpty() && !parent2Staples.isEmpty()) {
+            // 两个父代都有主食
             if (random.nextBoolean()) {
-                child1Genes.add(gene.copy());
+                // 子代1继承父代1的主食，子代2继承父代2的主食
+                child1Genes.add(parent1Staples.get(0).copy());
+                child2Genes.add(parent2Staples.get(0).copy());
             } else {
-                child2Genes.add(gene.copy());
+                // 子代1继承父代2的主食，子代2继承父代1的主食
+                child1Genes.add(parent2Staples.get(0).copy());
+                child2Genes.add(parent1Staples.get(0).copy());
+            }
+        } else if (!parent1Staples.isEmpty()) {
+            // 只有父代1有主食，两个子代都继承父代1的主食
+            FoodGene staple = parent1Staples.get(0).copy();
+            child1Genes.add(staple);
+            child2Genes.add(staple.copy());
+        } else if (!parent2Staples.isEmpty()) {
+            // 只有父代2有主食，两个子代都继承父代2的主食
+            FoodGene staple = parent2Staples.get(0).copy();
+            child1Genes.add(staple);
+            child2Genes.add(staple.copy());
+        }
+        
+        // 对非主食基因执行单点交叉
+        int parent1Size = parent1NonStaples.size();
+        int parent2Size = parent2NonStaples.size();
+        
+        if (parent1Size > 0 && parent2Size > 0) {
+            // 选择交叉点
+            int crossoverPoint1 = random.nextInt(parent1Size);
+            int crossoverPoint2 = random.nextInt(parent2Size);
+            
+            // 构建子代1：父代1前半部分 + 父代2后半部分
+            for (int i = 0; i < crossoverPoint1; i++) {
+                child1Genes.add(parent1NonStaples.get(i).copy());
+            }
+            
+            for (int i = crossoverPoint2; i < parent2Size; i++) {
+                child1Genes.add(parent2NonStaples.get(i).copy());
+            }
+            
+            // 构建子代2：父代2前半部分 + 父代1后半部分
+            for (int i = 0; i < crossoverPoint2; i++) {
+                child2Genes.add(parent2NonStaples.get(i).copy());
+            }
+            
+            for (int i = crossoverPoint1; i < parent1Size; i++) {
+                child2Genes.add(parent1NonStaples.get(i).copy());
+            }
+        } else if (parent1Size > 0) {
+            // 父代2没有非主食基因，子代均分父代1的非主食基因
+            int midPoint = parent1Size / 2;
+            
+            for (int i = 0; i < midPoint; i++) {
+                child1Genes.add(parent1NonStaples.get(i).copy());
+            }
+            
+            for (int i = midPoint; i < parent1Size; i++) {
+                child2Genes.add(parent1NonStaples.get(i).copy());
+            }
+        } else if (parent2Size > 0) {
+            // 父代1没有非主食基因，子代均分父代2的非主食基因
+            int midPoint = parent2Size / 2;
+            
+            for (int i = 0; i < midPoint; i++) {
+                child1Genes.add(parent2NonStaples.get(i).copy());
+            }
+            
+            for (int i = midPoint; i < parent2Size; i++) {
+                child2Genes.add(parent2NonStaples.get(i).copy());
             }
         }
         
-        for (String foodName : parent2Only) {
-            FoodGene gene = parent2Map.get(foodName);
-            if (random.nextBoolean()) {
-                child1Genes.add(gene.copy());
-            } else {
-                child2Genes.add(gene.copy());
+        // 移除重复食物
+        removeDuplicateFoods(child1Genes);
+        removeDuplicateFoods(child2Genes);
+        
+        // 创建子代解决方案
+        offspring.add(new MealSolution(child1Genes));
+        offspring.add(new MealSolution(child2Genes));
+        
+        return offspring;
+    }
+    
+    /**
+     * 移除基因列表中的重复食物
+     * @param genes 基因列表
+     */
+    private void removeDuplicateFoods(List<FoodGene> genes) {
+        Set<String> foodNames = new HashSet<>();
+        Iterator<FoodGene> iterator = genes.iterator();
+        
+        while (iterator.hasNext()) {
+            FoodGene gene = iterator.next();
+            if (!foodNames.add(gene.getFood().getName())) {
+                iterator.remove();
             }
         }
-        
-        return Arrays.asList(new MealSolution(child1Genes), new MealSolution(child2Genes));
     }
     
     /**

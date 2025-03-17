@@ -12,9 +12,9 @@ import java.util.*;
 public class MultiObjectiveEvaluator {
     // 各个目标评估器
     private List<NutrientObjective> nutrientObjectives = new ArrayList<>();
-    private PreferenceObjective preferenceObjective;
-    private DiversityObjective diversityObjective;
-    private BalanceObjective balanceObjective;
+    private UserPreferenceObjective preferenceObjective;
+    private FoodDiversityObjective diversityObjective;
+    private NutrientBalanceObjective balanceObjective;
     
     // 评分阈值
     private double goodEnoughThreshold = 0.8;
@@ -27,11 +27,11 @@ public class MultiObjectiveEvaluator {
         // 初始化营养素评估器
         this.nutrientObjectives = NutrientObjective.createStandardNutrientObjectives(userProfile);
         // 初始化偏好目标评估器,用于评估食物是否符合用户偏好
-        this.preferenceObjective = new PreferenceObjective(userProfile);
+        this.preferenceObjective = new UserPreferenceObjective(userProfile);
         // 初始化多样性目标评估器,用于评估食物种类的多样性
-        this.diversityObjective = new DiversityObjective();
+        this.diversityObjective = new FoodDiversityObjective();
         // 初始化平衡性目标评估器,用于评估营养素的平衡性
-        this.balanceObjective = new BalanceObjective();
+        this.balanceObjective = new NutrientBalanceObjective(userProfile);
     }
     
     /**
@@ -112,7 +112,7 @@ public class MultiObjectiveEvaluator {
      * 获取用户偏好目标
      * @return 用户偏好目标
      */
-    public PreferenceObjective getPreferenceObjective() {
+    public UserPreferenceObjective getPreferenceObjective() {
         return preferenceObjective;
     }
     
@@ -120,7 +120,7 @@ public class MultiObjectiveEvaluator {
      * 获取多样性目标
      * @return 多样性目标
      */
-    public DiversityObjective getDiversityObjective() {
+    public FoodDiversityObjective getDiversityObjective() {
         return diversityObjective;
     }
     
@@ -128,7 +128,7 @@ public class MultiObjectiveEvaluator {
      * 获取平衡目标
      * @return 平衡目标
      */
-    public BalanceObjective getBalanceObjective() {
+    public NutrientBalanceObjective getBalanceObjective() {
         return balanceObjective;
     }
     

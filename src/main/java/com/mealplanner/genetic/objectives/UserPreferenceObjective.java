@@ -12,7 +12,7 @@ import java.util.List;
 /**
  * 用户偏好目标类，评估解决方案与用户偏好的匹配度
  */
-public class PreferenceObjective extends AbstractObjectiveEvaluator {
+public class UserPreferenceObjective extends AbstractObjectiveEvaluator {
     // 用户档案
     private UserProfile userProfile;
     
@@ -27,7 +27,7 @@ public class PreferenceObjective extends AbstractObjectiveEvaluator {
      * 构造函数
      * @param userProfile 用户档案
      */
-    public PreferenceObjective(UserProfile userProfile) {
+    public UserPreferenceObjective(UserProfile userProfile) {
         super("preference_objective", 0.2);
         this.userProfile = userProfile;
     }
@@ -37,7 +37,7 @@ public class PreferenceObjective extends AbstractObjectiveEvaluator {
      * @param userProfile 用户档案
      * @param weight 目标权重
      */
-    public PreferenceObjective(UserProfile userProfile, double weight) {
+    public UserPreferenceObjective(UserProfile userProfile, double weight) {
         super("preference_objective", weight);
         this.userProfile = userProfile;
     }
