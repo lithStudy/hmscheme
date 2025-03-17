@@ -11,17 +11,14 @@ import com.mealplanner.genetic.model.ObjectiveValue;
 import com.mealplanner.genetic.util.NSGAIIConfiguration;
 import com.mealplanner.genetic.util.NutrientObjectiveConfig;
 import com.mealplanner.model.Food;
+import com.mealplanner.model.FoodCategory;
 import com.mealplanner.model.Nutrition;
 import com.mealplanner.model.UserProfile;
 
-import java.io.File;
 import java.io.IOException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.Scanner;
 
 /**
  * NSGA-II多目标遗传算法膳食规划演示类
@@ -34,6 +31,11 @@ public class GeneticMealPlannerDemo {
         
         // 加载食物数据库
         List<Food> foodDatabase = loadFoodDatabase();
+        // 过滤掉水果、油脂、糕点类别的食物
+        foodDatabase.removeIf(food -> food.getCategory() == FoodCategory.FRUIT 
+            || food.getCategory() == FoodCategory.OIL
+            || food.getCategory()==FoodCategory.PASTRY
+            || food.getCategory()==FoodCategory.MILK);
         if (foodDatabase.isEmpty()) {
             System.out.println("无法加载食物数据库，程序退出。");
             return;
@@ -297,88 +299,4 @@ public class GeneticMealPlannerDemo {
         }
     }
     
-    /**
-     * 格式化达成率状态（使用默认阈值）
-     * @param achievement 达成率百分比
-     * @return 状态描述
-     */
-    private static String formatAchievementStatus(double achievement) {
-        return formatAchievementStatus(achievement, 70, 130);
-    }
-    
-    /**
-     * 交互式显示结果
-     * @param solutions 解决方案列表
-     * @param targetNutrients 目标营养素
-     * @param planner 膳食规划器
-     */
-    private static void interactiveResultsDisplay(List<MealSolution> solutions, Nutrition targetNutrients, NSGAIIMealPlanner planner) {
-        if (solutions.isEmpty()) {
-            return;
-        }
-        
-        Scanner scanner = new Scanner(System.in);
-        int currentIndex = 0;
-        
-        while (true) {
-            System.out.println("\n====================================");
-            System.out.println("当前解决方案：#" + (currentIndex + 1) + " / " + solutions.size());
-            displaySolutionSummary(solutions.get(currentIndex), targetNutrients, planner);
-            
-            System.out.println("\n操作选项：");
-            System.out.println("1. 查看下一个解决方案");
-            System.out.println("2. 查看上一个解决方案");
-            System.out.println("3. 查看详细目标值");
-            System.out.println("4. 退出");
-            System.out.print("请选择：");
-            
-            String choice = scanner.nextLine().trim();
-            
-            switch (choice) {
-                case "1":
-                    // 下一个解决方案
-                    currentIndex = (currentIndex + 1) % solutions.size();
-                    break;
-                case "2":
-                    // 上一个解决方案
-                    currentIndex = (currentIndex - 1 + solutions.size()) % solutions.size();
-                    break;
-                case "3":
-                    // 显示详细目标值
-                    displayDetailedObjectives(solutions.get(currentIndex));
-                    break;
-                case "4":
-                    // 退出
-                    System.out.println("感谢使用NSGA-II多目标遗传算法膳食规划演示！");
-                    return;
-                default:
-                    System.out.println("无效选择，请重新输入。");
-            }
-        }
-    }
-    
-    /**
-     * 显示详细目标值
-     * @param solution 解决方案
-     */
-    private static void displayDetailedObjectives(MealSolution solution) {
-        System.out.println("\n详细目标值：");
-        System.out.println("====================================");
-        
-        for (ObjectiveValue objective : solution.getObjectiveValues()) {
-            System.out.println(objective.getName() + ":");
-            System.out.println("  值: " + String.format("%.4f", objective.getValue()));
-            System.out.println("  权重: " + String.format("%.2f", objective.getWeight()));
-            System.out.println("  加权值: " + String.format("%.4f", objective.getWeightedValue()));
-            System.out.println("  是否硬性约束: " + (objective.isHardConstraint() ? "是" : "否"));
-            if (objective.isHardConstraint()) {
-                System.out.println("  硬性约束阈值: " + String.format("%.2f", objective.getHardConstraintThreshold()));
-                System.out.println("  约束是否满足: " + (objective.isHardConstraintSatisfied() ? "是" : "否"));
-            }
-            System.out.println();
-        }
-        
-        System.out.println("按回车键继续...");
-        new Scanner(System.in).nextLine();
-    }
 } 

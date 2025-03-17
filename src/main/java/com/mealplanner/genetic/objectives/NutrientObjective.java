@@ -2,13 +2,16 @@ package com.mealplanner.genetic.objectives;
 
 import com.mealplanner.genetic.model.MealSolution;
 import com.mealplanner.genetic.model.ObjectiveValue;
-import com.mealplanner.model.HealthConditionType;
+import com.mealplanner.genetic.objectives.NutrientScoring.CalorieScoringStrategy;
+import com.mealplanner.genetic.objectives.NutrientScoring.DefaultNutrientScoringStrategy;
+import com.mealplanner.genetic.objectives.NutrientScoring.NutrientScoringStrategy;
+import com.mealplanner.genetic.objectives.NutrientScoring.StrictExcessPenaltyScoringStrategy;
+import com.mealplanner.genetic.util.NutrientObjectiveConfig;
 import com.mealplanner.model.Nutrition;
 import com.mealplanner.model.NutrientType;
 import com.mealplanner.model.UserProfile;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -19,43 +22,35 @@ public class NutrientObjective extends AbstractObjectiveEvaluator {
     // 对应的营养素类型
     private NutrientType nutrientType;
     
-    // 营养素评分方式（是否惩罚过量）
-    private boolean penalizeExcess; 
-    
-    // 营养素偏差容忍度，降低偏差容忍度，使系统对营养素目标更加严格
-    private double deviationTolerance = 0.1; // 默认允许10%的偏差
-    
     // 营养素硬性约束阈值，提高营养素目标的硬性约束阈值，确保所有解决方案必须满足更高的营养要求：
     private double hardConstraintThreshold = 0.8; // 默认80%的匹配度
     
+    private Map<NutrientType, double[]> nutrientRates; // 添加营养素达成率范围字段
+    
+    private NutrientScoringStrategy scoringStrategy;
+    
     /**
      * 构造函数
      * @param name 目标名称
      * @param nutrientType 营养素类型
      * @param weight 目标权重
      * @param penalizeExcess 是否惩罚过量
+     * @param nutrientRates 营养素达成率范围
      */
-    public NutrientObjective(String name, NutrientType nutrientType, double weight, boolean penalizeExcess) {
-        super(name, weight);
+    public NutrientObjective(NutrientType nutrientType, double weight, NutrientScoringStrategy scoringStrategy, Map<NutrientType, double[]> nutrientRates) {
+        super(nutrientType.getName(), weight);
         this.nutrientType = nutrientType;
-        this.penalizeExcess = penalizeExcess;
+        this.nutrientRates = nutrientRates;
+        this.scoringStrategy = scoringStrategy;
     }
 
-    /**
-     * 构造函数
-     * @param name 目标名称
-     * @param nutrientType 营养素类型
-     * @param weight 目标权重
-     * @param penalizeExcess 是否惩罚过量
-     * @param deviationTolerance 偏差容忍度
-     * @param hardConstraintThreshold 硬性约束阈值
-     */
-    public NutrientObjective(String name, NutrientType nutrientType, double weight, boolean penalizeExcess, double deviationTolerance, double hardConstraintThreshold) {
-        super(name, weight);
+    public NutrientObjective(NutrientType nutrientType, double weight, NutrientScoringStrategy scoringStrategy, Map<NutrientType, double[]> nutrientRates) {
+        super(nutrientType.getName(), weight);
         this.nutrientType = nutrientType;
-        this.penalizeExcess = penalizeExcess;
-        this.deviationTolerance = deviationTolerance;
+        this.nutrientRates = nutrientRates;
+        this.scoringStrategy = scoringStrategy;
         this.hardConstraintThreshold = hardConstraintThreshold;
+        
     }
     
     /**
@@ -66,26 +61,34 @@ public class NutrientObjective extends AbstractObjectiveEvaluator {
     public static List<NutrientObjective> createStandardNutrientObjectives(UserProfile userProfile) {
         List<NutrientObjective> nutrientObjectives = new ArrayList<>();
         
+        // 获取营养素达成率范围
+        Map<NutrientType, double[]> nutrientRates = NutrientObjectiveConfig.configureNutrientAchievementRates(userProfile);
         // 获取营养素权重
         Map<NutrientType, Double> nutrientWeights = NutrientType.getNutrientWeights(userProfile);
-        
-        // 初始化营养素目标
-        // 热量目标，使用更严格的参数
+
+        // 初始化热量目标评估器
         nutrientObjectives.add(new NutrientObjective(
-                NutrientType.CALORIES.getName() + "_objective", 
-                NutrientType.CALORIES, 
-                nutrientWeights.get(NutrientType.CALORIES), 
-                NutrientType.CALORIES.isDefaultPenalizeExcess(), 
-                0.05, 0.9));
+            NutrientType.CALORIES,
+            nutrientWeights.get(NutrientType.CALORIES),
+            new CalorieScoringStrategy(),
+            nutrientRates));
+        // 初始化钠目标评估器
+        nutrientObjectives.add(new NutrientObjective(
+            NutrientType.SODIUM,
+            nutrientWeights.get(NutrientType.SODIUM),
+            new StrictExcessPenaltyScoringStrategy(),
+            nutrientRates));
+
+
         
-        // 添加其他营养素目标
+        // 添加除热量外的其他营养素目标
         for (NutrientType type : NutrientType.values()) {
-            if (type != NutrientType.CALORIES) { // 热量已经单独处理
+            if (type != NutrientType.CALORIES) { // 热量由 CalorieObjective 处理
                 nutrientObjectives.add(new NutrientObjective(
-                        type.getName() + "_objective",
                         type,
                         nutrientWeights.get(type),
-                        type.isDefaultPenalizeExcess()));
+                        new DefaultNutrientScoringStrategy(),
+                        nutrientRates));
             }
         }
         
@@ -166,39 +169,14 @@ public class NutrientObjective extends AbstractObjectiveEvaluator {
      * @return 评分（0-1之间）
      */
     private double calculateNutrientScore(double actual, double target) {
-        // 避免除以零
         if (target == 0) {
             return actual == 0 ? 1.0 : 0.0;
         }
         
-        // 计算实际值与目标值的比率
+        double[] rates = nutrientRates.getOrDefault(nutrientType, new double[]{0.8, 1.2});
         double ratio = actual / target;
         
-        // 计算比率与理想比率1.0的偏差
-        double deviation = Math.abs(ratio - 1.0);
-        
-        // 如果偏差在容忍范围内，给予高分
-        if (deviation <= deviationTolerance) {
-            // 根据偏差程度给予分数，偏差越小分数越高
-            return 1.0 - (deviation / deviationTolerance) * 0.2;
-        }
-        
-        // 对热量不足的惩罚更严厉
-        if (ratio < 1.0) {
-            if (nutrientType == NutrientType.CALORIES) {
-                // 热量不足：更快速地减少分数
-                return Math.max(0, 0.8 - (1.0 - ratio - deviationTolerance) * 3);
-            } else {
-                // 其他营养素不足：标准线性减少分数
-                return Math.max(0, 0.8 - (1.0 - ratio - deviationTolerance) * 2);
-            }
-        } else if (penalizeExcess) {
-            // 营养素过量且需要惩罚：指数减少分数
-            return Math.max(0, 0.8 * Math.exp(-(ratio - 1.0 - deviationTolerance)));
-        } else {
-            // 营养素过量但不严格惩罚：缓慢减少分数
-            return Math.max(0, 0.8 - (ratio - 1.0 - deviationTolerance) * 0.5);
-        }
+        return scoringStrategy.calculateScore(ratio, rates[0], rates[1]);
     }
     
     /**
@@ -225,37 +203,6 @@ public class NutrientObjective extends AbstractObjectiveEvaluator {
         return nutrientType != null ? nutrientType.getName() : null;
     }
     
-    /**
-     * 是否惩罚过量
-     * @return 是否惩罚过量
-     */
-    public boolean isPenalizeExcess() {
-        return penalizeExcess;
-    }
-    
-    /**
-     * 设置是否惩罚过量
-     * @param penalizeExcess 是否惩罚过量
-     */
-    public void setPenalizeExcess(boolean penalizeExcess) {
-        this.penalizeExcess = penalizeExcess;
-    }
-    
-    /**
-     * 获取偏差容忍度
-     * @return 偏差容忍度
-     */
-    public double getDeviationTolerance() {
-        return deviationTolerance;
-    }
-    
-    /**
-     * 设置偏差容忍度
-     * @param deviationTolerance 偏差容忍度
-     */
-    public void setDeviationTolerance(double deviationTolerance) {
-        this.deviationTolerance = deviationTolerance;
-    }
     
     /**
      * 获取硬性约束阈值

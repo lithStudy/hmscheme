@@ -6,8 +6,8 @@ import com.alibaba.excel.util.StringUtils;
  * 食物类别枚举
  */
 public enum FoodCategory {
-    STAPLE("主食", "穀物類", new IntakeRange(80.0, 150.0, 100.0)),       // 主食80-150g，默认100g
-    VEGETABLE("蔬菜", "蔬菜類", new IntakeRange(100.0, 250.0, 150.0)),   // 蔬菜100-250g，默认150g
+    STAPLE("主食", "穀物類", new IntakeRange(100.0, 200.0, 150.0)),       // 主食80-150g，默认100g
+    VEGETABLE("蔬菜", "蔬菜類", new IntakeRange(100.0, 200.0, 150.0)),   // 蔬菜100-250g，默认150g
     FRUIT("水果", "水果類", new IntakeRange(100.0, 250.0, 150.0)),       // 水果100-250g，默认150g
     MEAT("肉类", "肉類", new IntakeRange(50.0, 100.0, 75.0)),           // 肉类50-100g，默认75g
     FISH("鱼类", "魚類", new IntakeRange(50.0, 100.0, 75.0)),           // 鱼类50-100g，默认75g

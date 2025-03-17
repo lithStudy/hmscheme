@@ -285,38 +285,3 @@ class NutrientLimit {
         }
     }
 }
-
-// 每日营养需求类
-// public static class Nutrition {
-//     private double totalCalories;  // 总热量(kcal)
-//     private double carbohydrates;  // 碳水化合物(g)
-//     private double protein;        // 蛋白质(g)
-//     private double fat;            // 脂肪(g)
-//     private double calcium;        // 钙(mg)
-//     private double potassium;      // 钾(mg)
-//     private double sodium;         // 钠(mg)
-//     private double magnesium;      // 镁(mg)
-
-//     public Nutrition(double totalCalories, double carbohydrates, 
-//                              double protein, double fat, double calcium,
-//                              double potassium, double sodium, double magnesium) {
-//         this.totalCalories = totalCalories;
-//         this.carbohydrates = carbohydrates;
-//         this.protein = protein;
-//         this.fat = fat;
-//         this.calcium = calcium;
-//         this.potassium = potassium;
-//         this.sodium = sodium;
-//         this.magnesium = magnesium;
-//     }
-
-//     // Getters
-//     public double getCalories() { return totalCalories; }
-//     public double getCarbohydrates() { return carbohydrates; }
-//     public double getProtein() { return protein; }
-//     public double getFat() { return fat; }
-//     public double getCalcium() { return calcium; }
-//     public double getPotassium() { return potassium; }
-//     public double getSodium() { return sodium; }
-//     public double getMagnesium() { return magnesium; }
-// } 

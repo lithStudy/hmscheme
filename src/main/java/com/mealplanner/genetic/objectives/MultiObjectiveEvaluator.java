@@ -16,11 +16,6 @@ public class MultiObjectiveEvaluator {
     private DiversityObjective diversityObjective;
     private BalanceObjective balanceObjective;
     
-    // 其他目标权重
-    private double preferenceWeight = 0.2;
-    private double diversityWeight = 0.2;
-    private double balanceWeight = 0.2;
-    
     // 评分阈值
     private double goodEnoughThreshold = 0.8;
     
@@ -29,14 +24,14 @@ public class MultiObjectiveEvaluator {
      * @param userProfile 用户档案
      */
     public MultiObjectiveEvaluator(UserProfile userProfile) {
+        // 初始化营养素评估器
+        this.nutrientObjectives = NutrientObjective.createStandardNutrientObjectives(userProfile);
         // 初始化偏好目标评估器,用于评估食物是否符合用户偏好
         this.preferenceObjective = new PreferenceObjective(userProfile);
         // 初始化多样性目标评估器,用于评估食物种类的多样性
         this.diversityObjective = new DiversityObjective();
         // 初始化平衡性目标评估器,用于评估营养素的平衡性
         this.balanceObjective = new BalanceObjective();
-        // 初始化营养元素评估器，用于评估每个营养元素成分的合理性
-        this.nutrientObjectives = NutrientObjective.createStandardNutrientObjectives(userProfile);
     }
     
     /**
@@ -47,27 +42,19 @@ public class MultiObjectiveEvaluator {
      */
     public List<ObjectiveValue> evaluate(MealSolution solution, Nutrition targetNutrients) {
         List<ObjectiveValue> objectiveValues = new ArrayList<>();
-        
         // 评估营养素目标
         for (NutrientObjective objective : nutrientObjectives) {
-            ObjectiveValue value = objective.evaluate(solution, targetNutrients);
-            objectiveValues.add(value);
+            objectiveValues.add(objective.evaluate(solution, targetNutrients));
         }
         
-        // 评估用户偏好目标
-        ObjectiveValue preferenceValue = preferenceObjective.evaluate(solution, targetNutrients);
-        preferenceValue.setWeight(preferenceWeight);
-        objectiveValues.add(preferenceValue);
+        // 评估偏好目标
+        objectiveValues.add(preferenceObjective.evaluate(solution, targetNutrients));
         
         // 评估多样性目标
-        ObjectiveValue diversityValue = diversityObjective.evaluate(solution, targetNutrients);
-        diversityValue.setWeight(diversityWeight);
-        objectiveValues.add(diversityValue);
+        objectiveValues.add(diversityObjective.evaluate(solution, targetNutrients));
         
-        // 评估平衡目标
-        ObjectiveValue balanceValue = balanceObjective.evaluate(solution, targetNutrients);
-        balanceValue.setWeight(balanceWeight);
-        objectiveValues.add(balanceValue);
+        // 评估平衡性目标
+        objectiveValues.add(balanceObjective.evaluate(solution, targetNutrients));
         
         return objectiveValues;
     }
@@ -146,38 +133,6 @@ public class MultiObjectiveEvaluator {
     }
     
     
-    /**
-     * 设置用户偏好权重
-     * @param weight 权重
-     */
-    public void setPreferenceWeight(double weight) {
-        this.preferenceWeight = weight;
-        if (preferenceObjective != null) {
-            preferenceObjective.setWeight(weight);
-        }
-    }
-    
-    /**
-     * 设置多样性权重
-     * @param weight 权重
-     */
-    public void setDiversityWeight(double weight) {
-        this.diversityWeight = weight;
-        if (diversityObjective != null) {
-            diversityObjective.setWeight(weight);
-        }
-    }
-    
-    /**
-     * 设置平衡权重
-     * @param weight 权重
-     */
-    public void setBalanceWeight(double weight) {
-        this.balanceWeight = weight;
-        if (balanceObjective != null) {
-            balanceObjective.setWeight(weight);
-        }
-    }
     
     /**
      * 设置"足够好"的阈值

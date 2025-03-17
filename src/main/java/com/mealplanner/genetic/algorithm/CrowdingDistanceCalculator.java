@@ -1,7 +1,6 @@
 package com.mealplanner.genetic.algorithm;
 
 import com.mealplanner.genetic.model.MealSolution;
-import com.mealplanner.genetic.model.ObjectiveValue;
 
 import java.util.*;
 

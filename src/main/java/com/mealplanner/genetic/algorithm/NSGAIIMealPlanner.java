@@ -5,6 +5,7 @@ import com.mealplanner.genetic.model.ObjectiveValue;
 import com.mealplanner.genetic.objectives.MultiObjectiveEvaluator;
 import com.mealplanner.genetic.operators.MealCrossover;
 import com.mealplanner.genetic.operators.MealMutation;
+import com.mealplanner.genetic.operators.MealMutation.MutationType;
 import com.mealplanner.genetic.operators.MealSelection;
 import com.mealplanner.genetic.util.NSGAIIConfiguration;
 import com.mealplanner.genetic.util.NSGAIILogger;
@@ -21,6 +22,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.io.File;
+import java.util.LinkedHashMap;
 
 /**
  * NSGA-II多目标遗传算法膳食规划器
@@ -89,7 +91,7 @@ public class NSGAIIMealPlanner {
         mutation.setTargetNutrients(targetNutrients);
         
         // 优先使用营养素敏感度分析变异策略
-        mutation.setMutationType(com.mealplanner.genetic.operators.MealMutation.MutationType.NUTRIENT_SENSITIVITY);
+        mutation.setMutationType(MutationType.NUTRIENT_SENSITIVITY);
         
         logger.startAlgorithm(config);
         
@@ -534,102 +536,45 @@ public class NSGAIIMealPlanner {
     }
     
     /**
-     * 计算解决方案的营养素偏离得分
-     * 偏离得分越低表示解决方案越接近理想的营养素达成率范围
-     * @param solution 解决方案
-     * @param targetNutrients 目标营养素
-     * @return 营养素偏离得分（越低越好）
+     * 计算营养素偏离度得分，热量权重更高
      */
     private double calculateNutrientDeviationScore(MealSolution solution, Nutrition targetNutrients) {
         Nutrition actualNutrients = solution.calculateTotalNutrients();
-        Map<String, Double> nutrientDeviations = new HashMap<>();
+        double totalDeviation = 0.0;
+        double totalWeight = 0.0;
         
-        // 计算各营养素的偏离度
-        if (targetNutrients.calories > 0) {
-            double ratio = actualNutrients.calories / targetNutrients.calories;
-            double[] range = getNutrientAchievementRate("calories");
-            double deviation = calculateDeviationFromRange(ratio, range[0], range[1]);
-            nutrientDeviations.put("calories", deviation);
-        }
+        // 热量偏差，权重为3
+        double caloriesDeviation = Math.abs(actualNutrients.getCalories() - targetNutrients.getCalories()) / targetNutrients.getCalories();
+        totalDeviation += caloriesDeviation * 3.0;
+        totalWeight += 3.0;
         
-        if (targetNutrients.carbohydrates > 0) {
-            double ratio = actualNutrients.carbohydrates / targetNutrients.carbohydrates;
-            double[] range = getNutrientAchievementRate("carbohydrates");
-            double deviation = calculateDeviationFromRange(ratio, range[0], range[1]);
-            nutrientDeviations.put("carbohydrates", deviation);
-        }
+        // 其他营养素偏差，权重为1
+        double proteinDeviation = Math.abs(actualNutrients.getProtein() - targetNutrients.getProtein()) / targetNutrients.getProtein();
+        double carbsDeviation = Math.abs(actualNutrients.getCarbohydrates() - targetNutrients.getCarbohydrates()) / targetNutrients.getCarbohydrates();
+        double fatDeviation = Math.abs(actualNutrients.getFat() - targetNutrients.getFat()) / targetNutrients.getFat();
         
-        if (targetNutrients.protein > 0) {
-            double ratio = actualNutrients.protein / targetNutrients.protein;
-            double[] range = getNutrientAchievementRate("protein");
-            double deviation = calculateDeviationFromRange(ratio, range[0], range[1]);
-            nutrientDeviations.put("protein", deviation);
-        }
+        totalDeviation += proteinDeviation + carbsDeviation + fatDeviation;
+        totalWeight += 3.0; // 三个主要营养素各占1权重
         
-        if (targetNutrients.fat > 0) {
-            double ratio = actualNutrients.fat / targetNutrients.fat;
-            double[] range = getNutrientAchievementRate("fat");
-            double deviation = calculateDeviationFromRange(ratio, range[0], range[1]);
-            nutrientDeviations.put("fat", deviation);
-        }
+        // 微量营养素偏差，权重为0.5
+        Map<String, Double> micronutrients = new LinkedHashMap<>();
+        micronutrients.put("calcium", (double) actualNutrients.getCalcium() / targetNutrients.getCalcium());
+        micronutrients.put("iron", (double) actualNutrients.getIron() / targetNutrients.getIron());
+        micronutrients.put("magnesium", (double) actualNutrients.getMagnesium() / targetNutrients.getMagnesium());
+        micronutrients.put("phosphorus", (double) actualNutrients.getPhosphorus() / targetNutrients.getPhosphorus());
+        micronutrients.put("potassium", (double) actualNutrients.getPotassium() / targetNutrients.getPotassium());
+        micronutrients.put("sodium", (double) actualNutrients.getSodium() / targetNutrients.getSodium());
         
-        if (targetNutrients.calcium > 0) {
-            double ratio = actualNutrients.calcium / targetNutrients.calcium;
-            double[] range = getNutrientAchievementRate("calcium");
-            double deviation = calculateDeviationFromRange(ratio, range[0], range[1]);
-            nutrientDeviations.put("calcium", deviation);
-        }
-        
-        if (targetNutrients.potassium > 0) {
-            double ratio = actualNutrients.potassium / targetNutrients.potassium;
-            double[] range = getNutrientAchievementRate("potassium");
-            double deviation = calculateDeviationFromRange(ratio, range[0], range[1]);
-            nutrientDeviations.put("potassium", deviation);
-        }
-        
-        if (targetNutrients.sodium > 0) {
-            double ratio = actualNutrients.sodium / targetNutrients.sodium;
-            double[] range = getNutrientAchievementRate("sodium");
-            // 对于钠这类限制性营养素，过量的偏离应该受到更严厉的惩罚
-            double deviation = calculateDeviationFromRange(ratio, range[0], range[1]);
-            if (ratio > range[1]) {
-                deviation *= 1.5; // 钠过量的偏离权重更高
+        for (double ratio : micronutrients.values()) {
+            if (ratio > 0) {
+                totalDeviation += Math.abs(1 - ratio) * 0.5;
+                totalWeight += 0.5;
             }
-            nutrientDeviations.put("sodium", deviation);
         }
         
-        if (targetNutrients.magnesium > 0) {
-            double ratio = actualNutrients.magnesium / targetNutrients.magnesium;
-            double[] range = getNutrientAchievementRate("magnesium");
-            double deviation = calculateDeviationFromRange(ratio, range[0], range[1]);
-            nutrientDeviations.put("magnesium", deviation);
-        }
-        
-        // 计算平均偏离度
-        double totalDeviation = 0;
-        for (double deviation : nutrientDeviations.values()) {
-            totalDeviation += deviation;
-        }
-        
-        return nutrientDeviations.isEmpty() ? 0 : totalDeviation / nutrientDeviations.size();
+        return totalDeviation / totalWeight;
     }
     
-    /**
-     * 计算实际比率与目标范围的偏离度
-     * @param ratio 实际比率
-     * @param minRate 最小达成率
-     * @param maxRate 最大达成率
-     * @return 偏离度（0表示在范围内，正值表示偏离范围的程度）
-     */
-    private double calculateDeviationFromRange(double ratio, double minRate, double maxRate) {
-        if (ratio >= minRate && ratio <= maxRate) {
-            return 0.0; // 在范围内，偏离为0
-        } else if (ratio < minRate) {
-            return minRate - ratio; // 不足的偏离
-        } else {
-            return ratio - maxRate; // 过量的偏离
-        }
-    }
     
     /**
      * 记录当前代的信息

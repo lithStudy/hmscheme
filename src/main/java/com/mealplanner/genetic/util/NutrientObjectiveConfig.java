@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.mealplanner.genetic.algorithm.NSGAIIMealPlanner;
 import com.mealplanner.model.HealthConditionType;
 import com.mealplanner.model.NutrientType;
 import com.mealplanner.model.UserProfile;
