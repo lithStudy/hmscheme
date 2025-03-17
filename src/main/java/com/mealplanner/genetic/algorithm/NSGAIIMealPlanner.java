@@ -13,6 +13,7 @@ import com.mealplanner.model.Food;
 import com.mealplanner.model.Nutrition;
 import com.mealplanner.model.UserProfile;
 import com.mealplanner.export.MealSolutionExcelExporter;
+import com.mealplanner.model.NutrientType;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -58,7 +59,7 @@ public class NSGAIIMealPlanner {
      * @param foodDatabase 食物数据库
      * @param userProfile 用户配置文件
      */
-    public NSGAIIMealPlanner(NSGAIIConfiguration config, List<Food> foodDatabase, UserProfile userProfile, Map<String, double[]> nutrientAchievementRates) {
+    public NSGAIIMealPlanner(NSGAIIConfiguration config, List<Food> foodDatabase, UserProfile userProfile) {
         this.config = config;
         this.foodDatabase = foodDatabase;
         this.userProfile = userProfile;
@@ -67,9 +68,22 @@ public class NSGAIIMealPlanner {
         this.mutation = new MealMutation(config.getMutationRate(), foodDatabase);
         this.selection = new MealSelection();
         this.logger = new NSGAIILogger();
-        this.nutrientAchievementRates = nutrientAchievementRates;
+        
+        // 使用 NutrientType 中的方法获取营养素达成率
+        Map<NutrientType, double[]> nutrientRates = NutrientType.configureNutrientAchievementRates(userProfile);
+        this.nutrientAchievementRates = convertToStringMap(nutrientRates);
     }
     
+    /**
+     * 将NutrientType映射转换为String映射
+     */
+    private Map<String, double[]> convertToStringMap(Map<NutrientType, double[]> nutrientTypeMap) {
+        Map<String, double[]> stringMap = new HashMap<>();
+        for (Map.Entry<NutrientType, double[]> entry : nutrientTypeMap.entrySet()) {
+            stringMap.put(entry.getKey().getName(), entry.getValue());
+        }
+        return stringMap;
+    }
     
     /**
      * 生成一餐的膳食方案
@@ -311,9 +325,13 @@ public class NSGAIIMealPlanner {
             logger.warning("没有解决方案满足所有营养素达成率的要求");
             
             // 按照营养素偏离度升序排序所有解决方案（偏离度越低越好）
+            // List<MealSolution> sortedSolutions = allParetoFront.stream()
+            //         .sorted(Comparator.comparing(
+            //             solution -> calculateNutrientDeviationScore(solution, targetNutrients)))
+            //         .collect(Collectors.toList());
             List<MealSolution> sortedSolutions = allParetoFront.stream()
-                    .sorted(Comparator.comparing(
-                        solution -> calculateNutrientDeviationScore(solution, targetNutrients)))
+            .sorted(Comparator.<MealSolution, Double>comparing(
+                            this::calculateAverageObjectiveScore).reversed())
                     .collect(Collectors.toList());
             
             // 选择前三个解决方案（如果有的话）
@@ -326,10 +344,10 @@ public class NSGAIIMealPlanner {
                 for (int i = 0; i < topCount; i++) {
                     MealSolution solution = sortedSolutions.get(i);
                     double deviationScore = calculateNutrientDeviationScore(solution, targetNutrients);
-                    double achievementScore = calculateAverageNutrientAchievement(solution, targetNutrients);
+                    double achievementScore = calculateAverageObjectiveScore(solution);
                     logger.info("替代方案 #" + (i+1) + 
                                " 营养素偏离度: " + String.format("%.4f", deviationScore) + 
-                               ", 平均营养素达成率: " + String.format("%.2f", achievementScore));
+                               ", 平均分数: " + String.format("%.2f", achievementScore));
                 }
             }
         }
@@ -415,89 +433,31 @@ public class NSGAIIMealPlanner {
         return true;
     }
     
+    
     /**
-     * 计算解决方案的平均营养素达成率，同时考虑过高和过低的偏差
+     * 计算解决方案的加权平均目标评分
      * @param solution 解决方案
-     * @param targetNutrients 目标营养素
-     * @return 平均营养素达成率得分
+     * @return 加权平均目标评分（0-1之间）
      */
-    private double calculateAverageNutrientAchievement(MealSolution solution, Nutrition targetNutrients) {
-        Nutrition actualNutrients = solution.calculateTotalNutrients();
-        
-        // 使用Map存储各营养素的达成率和得分，而不是数组
-        Map<String, Double> nutrientRatios = new HashMap<>();
-        Map<String, Double> nutrientScores = new HashMap<>();
-        
-        // 计算各营养素的达成率
-        if (targetNutrients.calories > 0) {
-            double ratio = actualNutrients.calories / targetNutrients.calories;
-            nutrientRatios.put("calories", ratio);
+    public double calculateAverageObjectiveScore(MealSolution solution) {
+        List<ObjectiveValue> objectives = solution.getObjectiveValues();
+        if (objectives == null || objectives.isEmpty()) {
+            return 0.0;
         }
         
-        if (targetNutrients.carbohydrates > 0) {
-            double ratio = actualNutrients.carbohydrates / targetNutrients.carbohydrates;
-            nutrientRatios.put("carbohydrates", ratio);
-        }
+        double totalScore = 0.0;
+        double totalWeight = 0.0;
         
-        if (targetNutrients.protein > 0) {
-            double ratio = actualNutrients.protein / targetNutrients.protein;
-            nutrientRatios.put("protein", ratio);
-        }
-        
-        if (targetNutrients.fat > 0) {
-            double ratio = actualNutrients.fat / targetNutrients.fat;
-            nutrientRatios.put("fat", ratio);
-        }
-        
-        if (targetNutrients.calcium > 0) {
-            double ratio = actualNutrients.calcium / targetNutrients.calcium;
-            nutrientRatios.put("calcium", ratio);
-        }
-        
-        if (targetNutrients.potassium > 0) {
-            double ratio = actualNutrients.potassium / targetNutrients.potassium;
-            nutrientRatios.put("potassium", ratio);
-        }
-        
-        if (targetNutrients.sodium > 0) {
-            double ratio = actualNutrients.sodium / targetNutrients.sodium;
-            nutrientRatios.put("sodium", ratio);
-        }
-        
-        if (targetNutrients.magnesium > 0) {
-            double ratio = actualNutrients.magnesium / targetNutrients.magnesium;
-            nutrientRatios.put("magnesium", ratio);
-        }
-        
-        // 计算每个营养素的得分
-        // 当达成率在[minRate, maxRate]范围内时，得分为1.0
-        // 当达成率超出范围时，得分根据偏离程度降低
-        for (Map.Entry<String, Double> entry : nutrientRatios.entrySet()) {
-            String nutrientName = entry.getKey();
-            double ratio = entry.getValue();
-            double[] range = getNutrientAchievementRate(nutrientName);
-            double minRate = range[0];
-            double maxRate = range[1];
+        // 遍历所有目标，根据目标类型分配权重
+        for (ObjectiveValue objective : objectives) {
+            double weight;
+            weight = objective.getWeight();
             
-            double score;
-            if (ratio >= minRate && ratio <= maxRate) {
-                score = 1.0;
-            } else if (ratio < minRate) {
-                score = ratio / minRate;
-            } else {
-                score = maxRate / ratio;
-            }
-            
-            nutrientScores.put(nutrientName, score);
+            totalScore += objective.getValue() * weight;
+            totalWeight += weight;
         }
         
-        // 计算平均得分
-        double totalScore = 0;
-        for (double score : nutrientScores.values()) {
-            totalScore += score;
-        }
-        
-        return nutrientScores.isEmpty() ? 0 : totalScore / nutrientScores.size();
+        return totalWeight > 0 ? totalScore / totalWeight : 0.0;
     }
     
     /**
@@ -522,17 +482,6 @@ public class NSGAIIMealPlanner {
     public double[] getNutrientAchievementRate(String nutrientName) {
         return nutrientAchievementRates.getOrDefault(nutrientName, 
                 new double[]{0.9, 1.1}); // 使用NutrientObjectiveConfig中的默认值
-    }
-    
-    /**
-     * 计算解决方案的平均营养素达成率得分
-     * 此方法可供外部调用，用于展示解决方案的营养素达成情况
-     * @param solution 解决方案
-     * @param targetNutrients 目标营养素
-     * @return 平均营养素达成率得分（0-1之间）
-     */
-    public double calculateSolutionNutrientScore(MealSolution solution, Nutrition targetNutrients) {
-        return calculateAverageNutrientAchievement(solution, targetNutrients);
     }
     
     /**

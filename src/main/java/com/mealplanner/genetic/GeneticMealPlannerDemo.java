@@ -174,8 +174,8 @@ public class GeneticMealPlannerDemo {
         // double maxRate = planner.getMaxNutrientAchievementRate() * 100; // 转换为百分比
         
         // 计算并显示平均营养素达成率得分
-        double nutrientScore = planner.calculateSolutionNutrientScore(solution, targetNutrients);
-        System.out.println("平均营养素达成率得分: " + String.format("%.2f", nutrientScore) + 
+        double nutrientScore = planner.calculateAverageObjectiveScore(solution);
+        System.out.println("平均得分: " + String.format("%.2f", nutrientScore) + 
                          " (" + String.format("%.1f", nutrientScore * 100) + "%)");
         
         // 显示食物列表

@@ -1,23 +1,28 @@
 package com.mealplanner.model;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+
+import lombok.Getter;
 
 /**
  * 营养素类型枚举
  * 定义了系统中支持的所有营养素类型
  */
+@Getter
 public enum NutrientType {
-    CALORIES("calories", "热量", true, 3.0),
-    CARBOHYDRATES("carbohydrates", "碳水化合物", true, 1.0),
-    PROTEIN("protein", "蛋白质", true, 1.0),
-    FAT("fat", "脂肪", true, 0.8),
-    CALCIUM("calcium", "钙", false, 0.7),
-    POTASSIUM("potassium", "钾", false, 0.7),
-    SODIUM("sodium", "钠", true, 0.8),
-    MAGNESIUM("magnesium", "镁", false, 0.7),
-    IRON("iron", "铁", false, 0.7),
-    PHOSPHORUS("phosphorus", "磷", false, 0.7);
+    CALORIES("calories", "热量", true, 3.0, new double[]{0.9, 1.1}),
+    CARBOHYDRATES("carbohydrates", "碳水化合物", true, 1.0, new double[]{0.85, 1.15}),
+    PROTEIN("protein", "蛋白质", true, 1.0, new double[]{0.9, 1.2}),
+    FAT("fat", "脂肪", true, 0.8, new double[]{0.7, 1.1}),
+    CALCIUM("calcium", "钙", false, 0.7, new double[]{0.8, 1.5}),
+    POTASSIUM("potassium", "钾", false, 0.7, new double[]{0.8, 1.5}),
+    SODIUM("sodium", "钠", true, 0.8, new double[]{0.5, 1.0}),
+    MAGNESIUM("magnesium", "镁", false, 0.7, new double[]{0.8, 1.5}),
+    IRON("iron", "铁", false, 0.7, new double[]{0.8, 1.5}),
+    PHOSPHORUS("phosphorus", "磷", false, 0.7, new double[]{0.8, 1.5});
     
     // 营养素的英文名称
     private final String name;
@@ -31,86 +36,144 @@ public enum NutrientType {
     // 默认权重
     private final double defaultWeight;
     
+    // 默认达成率范围 [最小达成率, 最大达成率]
+    private final double[] defaultAchievementRange;
+    
+    // 存储疾病特定的营养素达成率调整
+    private static final Map<HealthConditionType, Map<NutrientType, double[]>> DISEASE_NUTRIENT_RATES = new HashMap<>();
+    
+    static {
+        initializeDiseaseNutrientRates();
+    }
+    
     /**
      * 构造函数
-     * @param name 营养素名称
-     * @param displayName 显示名称
-     * @param defaultPenalizeExcess 默认是否惩罚过量
-     * @param defaultWeight 默认权重
      */
-    NutrientType(String name, String displayName, boolean defaultPenalizeExcess, double defaultWeight) {
+    NutrientType(String name, String displayName, boolean defaultPenalizeExcess, double defaultWeight, double[] defaultAchievementRange) {
         this.name = name;
         this.displayName = displayName;
         this.defaultPenalizeExcess = defaultPenalizeExcess;
         this.defaultWeight = defaultWeight;
+        this.defaultAchievementRange = defaultAchievementRange;
     }
     
     /**
-     * 获取营养素名称
-     * @return 营养素名称
+     * 初始化疾病特定的营养素达成率调整
      */
-    public String getName() {
-        return name;
+    private static void initializeDiseaseNutrientRates() {
+        // 糖尿病
+        Map<NutrientType, double[]> diabetesRates = new HashMap<>();
+        diabetesRates.put(CALORIES, new double[]{0.9, 1.0});       // 控制热量
+        diabetesRates.put(CARBOHYDRATES, new double[]{0.7, 0.9});  // 严格限制碳水
+        diabetesRates.put(PROTEIN, new double[]{1.0, 1.2});        // 适当增加蛋白质
+        diabetesRates.put(FAT, new double[]{0.8, 1.0});            // 控制脂肪
+        diabetesRates.put(SODIUM, new double[]{0.5, 0.9});         // 限制钠
+        DISEASE_NUTRIENT_RATES.put(HealthConditionType.DIABETES, diabetesRates);
+        
+        // 高血压
+        Map<NutrientType, double[]> hypertensionRates = new HashMap<>();
+        hypertensionRates.put(SODIUM, new double[]{0.3, 0.7});     // 严格限制钠
+        hypertensionRates.put(POTASSIUM, new double[]{1.0, 1.5});  // 增加钾
+        hypertensionRates.put(FAT, new double[]{0.7, 0.9});        // 限制脂肪
+        DISEASE_NUTRIENT_RATES.put(HealthConditionType.HYPERTENSION, hypertensionRates);
+        
+        // 肾病
+        Map<NutrientType, double[]> kidneyDiseaseRates = new HashMap<>();
+        kidneyDiseaseRates.put(PROTEIN, new double[]{0.6, 0.8});   // 限制蛋白质
+        kidneyDiseaseRates.put(SODIUM, new double[]{0.4, 0.8});    // 限制钠
+        kidneyDiseaseRates.put(POTASSIUM, new double[]{0.6, 0.9}); // 限制钾
+        kidneyDiseaseRates.put(PHOSPHORUS, new double[]{0.6, 0.9});// 限制磷
+        DISEASE_NUTRIENT_RATES.put(HealthConditionType.KIDNEY_DISEASE, kidneyDiseaseRates);
+        
+        // 骨质疏松
+        Map<NutrientType, double[]> osteoporosisRates = new HashMap<>();
+        osteoporosisRates.put(CALCIUM, new double[]{1.2, 1.8});    // 增加钙
+        DISEASE_NUTRIENT_RATES.put(HealthConditionType.OSTEOPOROSIS, osteoporosisRates);
+        
+        // 心脏病
+        Map<NutrientType, double[]> heartDiseaseRates = new HashMap<>();
+        heartDiseaseRates.put(FAT, new double[]{0.6, 0.8});        // 严格限制脂肪
+        heartDiseaseRates.put(SODIUM, new double[]{0.4, 0.7});     // 限制钠
+        DISEASE_NUTRIENT_RATES.put(HealthConditionType.HEART_DISEASE, heartDiseaseRates);
     }
     
     /**
-     * 获取显示名称
-     * @return 显示名称
+     * 配置营养素达成率范围
+     * @param userProfile 用户档案（包含健康状况）
+     * @return 营养素达成率映射
      */
-    public String getDisplayName() {
-        return displayName;
-    }
-    
-    /**
-     * 获取默认是否惩罚过量
-     * @return 默认是否惩罚过量
-     */
-    public boolean isDefaultPenalizeExcess() {
-        return defaultPenalizeExcess;
-    }
-    
-    /**
-     * 获取默认权重
-     * @return 默认权重
-     */
-    public double getDefaultWeight() {
-        return defaultWeight;
-    }
-    
-    /**
-     * 根据名称获取营养素类型
-     * @param name 营养素名称
-     * @return 营养素类型，如果找不到则返回null
-     */
-    public static NutrientType fromName(String name) {
-        if (name == null) {
-            return null;
+    public static Map<NutrientType, double[]> configureNutrientAchievementRates(UserProfile userProfile) {
+        // 创建营养素达成率映射，使用默认值
+        Map<NutrientType, double[]> nutrientRates = new HashMap<>();
+        for (NutrientType nutrient : values()) {
+            nutrientRates.put(nutrient, nutrient.defaultAchievementRange.clone());
         }
         
-        for (NutrientType type : values()) {
-            if (type.name.equalsIgnoreCase(name)) {
-                return type;
+        // 根据用户健康状况调整营养素达成率
+        if (userProfile != null && userProfile.getHealthConditions() != null) {
+            HealthConditionType[] healthConditions = HealthConditionType.fromNames(userProfile.getHealthConditions());
+            
+            // 创建临时映射，存储所有疾病对每个营养素的要求
+            Map<NutrientType, List<double[]>> allDiseaseRequirements = new HashMap<>();
+            
+            // 收集所有疾病对每个营养素的要求
+            for (HealthConditionType condition : healthConditions) {
+                if (condition == null) continue;
+                
+                Map<NutrientType, double[]> diseaseRates = DISEASE_NUTRIENT_RATES.get(condition);
+                if (diseaseRates != null) {
+                    for (Map.Entry<NutrientType, double[]> entry : diseaseRates.entrySet()) {
+                        NutrientType nutrient = entry.getKey();
+                        double[] range = entry.getValue();
+                        
+                        allDiseaseRequirements.computeIfAbsent(nutrient, k -> new ArrayList<>()).add(range);
+                    }
+                }
+            }
+            
+            // 对于每个营养素，综合考虑所有疾病的要求，取最严格的限制
+            for (Map.Entry<NutrientType, List<double[]>> entry : allDiseaseRequirements.entrySet()) {
+                NutrientType nutrient = entry.getKey();
+                List<double[]> ranges = entry.getValue();
+                
+                if (!ranges.isEmpty()) {
+                    double minRate = ranges.get(0)[0];
+                    double maxRate = ranges.get(0)[1];
+                    
+                    for (int i = 1; i < ranges.size(); i++) {
+                        double[] range = ranges.get(i);
+                        minRate = Math.max(minRate, range[0]); // 取最大的下限
+                        maxRate = Math.min(maxRate, range[1]); // 取最小的上限
+                    }
+                    
+                    if (minRate <= maxRate) {
+                        nutrientRates.put(nutrient, new double[]{minRate, maxRate});
+                    } else {
+                        double middleValue = (minRate + maxRate) / 2;
+                        nutrientRates.put(nutrient, new double[]{middleValue, middleValue});
+                    }
+                }
             }
         }
         
-        return null;
+        return nutrientRates;
     }
-
+    
+    /**
+     * 获取营养素权重映射
+     */
     public static Map<NutrientType, Double> getNutrientWeights(UserProfile userProfile) {
-        Map<NutrientType, Double> nutrientWeights = new HashMap<>();
+        Map<NutrientType, Double> weights = new HashMap<>();
+        for (NutrientType nutrient : values()) {
+            weights.put(nutrient, nutrient.defaultWeight);
+        }
         
-        // 使用枚举中定义的默认权重
-        for (NutrientType type : values()) {
-            nutrientWeights.put(type, type.getDefaultWeight());
+        if (userProfile != null && userProfile.getHealthConditions() != null) {
+            adjustWeightsByHealthConditions(userProfile.getHealthConditions(), weights);
         }
-
-        if (userProfile != null) {
-            adjustWeightsByHealthConditions(userProfile.getHealthConditions(), nutrientWeights);
-        }
-
-        return nutrientWeights;
+        
+        return weights;
     }
-
     
     /**
      * 根据用户健康状况调整营养素权重
