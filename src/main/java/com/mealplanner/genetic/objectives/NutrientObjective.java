@@ -6,7 +6,6 @@ import com.mealplanner.genetic.objectives.NutrientScoring.CalorieScoringStrategy
 import com.mealplanner.genetic.objectives.NutrientScoring.DefaultNutrientScoringStrategy;
 import com.mealplanner.genetic.objectives.NutrientScoring.NutrientScoringStrategy;
 import com.mealplanner.genetic.objectives.NutrientScoring.StrictExcessPenaltyScoringStrategy;
-import com.mealplanner.genetic.util.NutrientObjectiveConfig;
 import com.mealplanner.model.Nutrition;
 import com.mealplanner.model.NutrientType;
 import com.mealplanner.model.UserProfile;
@@ -62,7 +61,7 @@ public class NutrientObjective extends AbstractObjectiveEvaluator {
         List<NutrientObjective> nutrientObjectives = new ArrayList<>();
         
         // 获取营养素达成率范围
-        Map<NutrientType, double[]> nutrientRates = NutrientObjectiveConfig.configureNutrientAchievementRates(userProfile);
+        Map<NutrientType, double[]> nutrientRates = NutrientType.getNutrientRates(userProfile);
         // 获取营养素权重
         Map<NutrientType, Double> nutrientWeights = NutrientType.getNutrientWeights(userProfile);
 

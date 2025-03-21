@@ -13,16 +13,22 @@ import lombok.Getter;
  */
 @Getter
 public enum NutrientType {
-    CALORIES("calories", "热量", true, 3.0, new double[]{0.9, 1.1}),
-    CARBOHYDRATES("carbohydrates", "碳水化合物", true, 1.0, new double[]{0.85, 1.15}),
-    PROTEIN("protein", "蛋白质", true, 1.0, new double[]{0.9, 1.2}),
-    FAT("fat", "脂肪", true, 0.8, new double[]{0.7, 1.1}),
-    CALCIUM("calcium", "钙", false, 0.7, new double[]{0.8, 1.5}),
-    POTASSIUM("potassium", "钾", false, 0.7, new double[]{0.8, 1.5}),
-    SODIUM("sodium", "钠", true, 0.8, new double[]{0.5, 1.0}),
-    MAGNESIUM("magnesium", "镁", false, 0.7, new double[]{0.8, 1.5}),
-    IRON("iron", "铁", false, 0.7, new double[]{0.8, 1.5}),
-    PHOSPHORUS("phosphorus", "磷", false, 0.7, new double[]{0.8, 1.5});
+    CALORIES("calories", "热量", true, 3.0, new double[]{0.9, 1.1}, 2000.0),
+    CARBOHYDRATES("carbohydrates", "碳水化合物", true, 1.0, new double[]{0.85, 1.15}, 250.0),
+    PROTEIN("protein", "蛋白质", true, 1.0, new double[]{0.9, 1.2}, 70.0),
+    FAT("fat", "脂肪", true, 0.8, new double[]{0.7, 1.1}, 60.0),
+    FIBER("fiber", "膳食纤维", true, 0.5, new double[]{0.8, 1.5}, 25.0),
+    CALCIUM("calcium", "钙", false, 0.7, new double[]{0.8, 1.5}, 1000.0),
+    POTASSIUM("potassium", "钾", false, 0.7, new double[]{0.8, 1.5}, 3500.0),
+    SODIUM("sodium", "钠", true, 0.8, new double[]{0.5, 1.0}, 2000.0),
+    MAGNESIUM("magnesium", "镁", false, 0.7, new double[]{0.8, 1.5}, 350.0),
+    IRON("iron", "铁", false, 0.7, new double[]{0.8, 1.5}, 10.0),
+    PHOSPHORUS("phosphorus", "磷", false, 0.7, new double[]{0.8, 1.5}, 700.0),
+    ZINC("zinc", "锌", false, 0.7, new double[]{0.8, 1.5}, 10.0),
+    VITAMIN_A("vitamin_a", "维生素A", false, 0.7, new double[]{0.8, 1.5}, 800.0),
+    VITAMIN_C("vitamin_c", "维生素C", false, 0.7, new double[]{0.8, 1.5}, 80.0),
+    VITAMIN_D("vitamin_d", "维生素D", false, 0.7, new double[]{0.8, 1.5}, 10.0),
+    VITAMIN_E("vitamin_e", "维生素E", false, 0.7, new double[]{0.8, 1.5}, 15.0);
     
     // 营养素的英文名称
     private final String name;
@@ -39,22 +45,31 @@ public enum NutrientType {
     // 默认达成率范围 [最小达成率, 最大达成率]
     private final double[] defaultAchievementRange;
     
+    // 默认每日摄入量（单位取决于营养素类型：热量kcal，宏量营养素g，微量元素mg或μg）
+    private final double defaultDailyIntake;
+    
     // 存储疾病特定的营养素达成率调整
     private static final Map<HealthConditionType, Map<NutrientType, double[]>> DISEASE_NUTRIENT_RATES = new HashMap<>();
     
+    // 疾病相关的营养素调整因子
+    private static final Map<String, Map<NutrientType, Double>> HEALTH_CONDITION_ADJUSTMENT = new HashMap<>();
+    
     static {
         initializeDiseaseNutrientRates();
+        initializeDiseaseNutrientIntake();
     }
     
     /**
      * 构造函数
      */
-    NutrientType(String name, String displayName, boolean defaultPenalizeExcess, double defaultWeight, double[] defaultAchievementRange) {
+    NutrientType(String name, String displayName, boolean defaultPenalizeExcess, 
+                double defaultWeight, double[] defaultAchievementRange, double defaultDailyIntake) {
         this.name = name;
         this.displayName = displayName;
         this.defaultPenalizeExcess = defaultPenalizeExcess;
         this.defaultWeight = defaultWeight;
         this.defaultAchievementRange = defaultAchievementRange;
+        this.defaultDailyIntake = defaultDailyIntake;
     }
     
     /**
@@ -98,11 +113,196 @@ public enum NutrientType {
     }
     
     /**
+     * 初始化疾病相关的营养素摄入量调整因子
+     */
+    private static void initializeDiseaseNutrientIntake() {
+        // 高血压调整
+        Map<NutrientType, Double> hypertensionAdjustments = new HashMap<>();
+        hypertensionAdjustments.put(SODIUM, 0.6); // 高血压患者钠摄入量降至正常人的60%
+        hypertensionAdjustments.put(POTASSIUM, 1.2); // 高血压患者钾摄入量增至正常人的120%
+        hypertensionAdjustments.put(CALCIUM, 1.1); // 钙略微增加
+        HEALTH_CONDITION_ADJUSTMENT.put("hypertension", hypertensionAdjustments);
+        
+        // 糖尿病调整
+        Map<NutrientType, Double> diabetesAdjustments = new HashMap<>();
+        diabetesAdjustments.put(CARBOHYDRATES, 0.7); // 糖尿病患者碳水化合物摄入量降至正常人的70%
+        diabetesAdjustments.put(FIBER, 1.3); // 增加膳食纤维摄入
+        diabetesAdjustments.put(FAT, 0.9); // 减少脂肪摄入
+        HEALTH_CONDITION_ADJUSTMENT.put("diabetes", diabetesAdjustments);
+        
+        // 骨质疏松调整
+        Map<NutrientType, Double> osteoporosisAdjustments = new HashMap<>();
+        osteoporosisAdjustments.put(CALCIUM, 1.5); // 骨质疏松患者钙摄入量增至正常人的150%
+        osteoporosisAdjustments.put(VITAMIN_D, 2.0); // 维生素D增加一倍
+        osteoporosisAdjustments.put(MAGNESIUM, 1.2); // 增加镁摄入
+        HEALTH_CONDITION_ADJUSTMENT.put("osteoporosis", osteoporosisAdjustments);
+    }
+    
+    
+    /**
+     * 获取健康状况名称数组
+     * @param healthConditions 健康状况类型数组
+     * @return 健康状况名称数组
+     */
+    private static String[] getHealthConditionNames(HealthConditionType[] healthConditions) {
+        if (healthConditions == null || healthConditions.length == 0) {
+            return new String[0];
+        }
+        
+        String[] names = new String[healthConditions.length];
+        for (int i = 0; i < healthConditions.length; i++) {
+            names[i] = healthConditions[i].getName();
+        }
+        
+        return names;
+    }
+    
+    /**
+     * 根据用户配置文件获取个体化的每日营养素摄入量
+     * @param userProfile 用户配置文件
+     * @return 个体化后的每日摄入量
+     */
+    public double getPersonalizedDailyIntake(UserProfile userProfile) {
+        // 从默认值开始
+        double baseIntake = defaultDailyIntake;
+        
+        // 根据性别调整
+        if (userProfile.getGender().equalsIgnoreCase("F")) {
+            // 女性铁需求量通常高于男性
+            if (this == IRON) {
+                baseIntake = 18.0; // 女性铁摄入量推荐值
+            }
+            
+            if (this == MAGNESIUM) {
+                baseIntake = 310.0; // 女性镁摄入量推荐值
+            }
+        }
+        
+        // 根据年龄调整
+        if (userProfile.getAge() > 50) {
+            // 50岁以上钙需求增加
+            if (this == CALCIUM) {
+                baseIntake *= 1.2;
+            }
+        }
+        
+        // // 根据体重调整蛋白质需求
+        // if (this == PROTEIN) {
+        //     // 蛋白质推荐量：0.8g/kg体重/天
+        //     baseIntake = userProfile.getWeight() * 0.8;
+        //     // 运动者增加蛋白质摄入
+        //     if (userProfile.getActivityLevel() > 1.7) {
+        //         baseIntake *= 1.3;
+        //     }
+        // }
+        
+        // // 根据活动水平调整热量需求
+        // if (this == CALORIES) {
+        //     baseIntake *= userProfile.getActivityLevel();
+        // }
+        
+        // 根据疾病情况调整
+        String[] healthConditionNames = getHealthConditionNames(userProfile.getHealthConditions());
+        for (String condition : healthConditionNames) {
+            if (HEALTH_CONDITION_ADJUSTMENT.containsKey(condition)) {
+                Double factor = HEALTH_CONDITION_ADJUSTMENT.get(condition).get(this);
+                if (factor != null) {
+                    baseIntake *= factor;
+                }
+            }
+        }
+        
+        return baseIntake;
+    }
+    
+    /**
+     * 获取所有营养素的个体化每日摄入量
+     * @param userProfile 用户配置文件
+     * @return 营养素-摄入量映射
+     */
+    public static Map<NutrientType, Double> getAllPersonalizedDailyIntakes(UserProfile userProfile) {
+        Map<NutrientType, Double> results = new HashMap<>();
+        
+        for (NutrientType nutrient : values()) {
+            results.put(nutrient, nutrient.getPersonalizedDailyIntake(userProfile));
+        }
+        
+        return results;
+    }
+    
+    /**
+     * 配置基于用户配置文件的营养素达成率范围
+     * @param userProfile 用户配置文件
+     * @return 营养素达成率范围映射
+     */
+    public static Map<NutrientType, double[]> configureNutrientAchievementRates(UserProfile userProfile) {
+        // 使用现有的getNutrientRates方法
+        return getNutrientRates(userProfile);
+    }
+    
+    /**
+     * 获取所有微量元素的每日摄入量建议
+     * @param userProfile 用户配置文件
+     * @return 微量元素每日摄入量建议
+     */
+    public static Map<NutrientType, Double> getAllMicronutrientIntakes(UserProfile userProfile) {
+        Map<NutrientType, Double> intakes = new HashMap<>();
+        
+        // 仅选择微量元素
+        intakes.put(CALCIUM, CALCIUM.getPersonalizedDailyIntake(userProfile));
+        intakes.put(POTASSIUM, POTASSIUM.getPersonalizedDailyIntake(userProfile));
+        intakes.put(SODIUM, SODIUM.getPersonalizedDailyIntake(userProfile));
+        intakes.put(MAGNESIUM, MAGNESIUM.getPersonalizedDailyIntake(userProfile));
+        intakes.put(IRON, IRON.getPersonalizedDailyIntake(userProfile));
+        intakes.put(PHOSPHORUS, PHOSPHORUS.getPersonalizedDailyIntake(userProfile));
+        intakes.put(ZINC, ZINC.getPersonalizedDailyIntake(userProfile));
+        intakes.put(VITAMIN_A, VITAMIN_A.getPersonalizedDailyIntake(userProfile));
+        intakes.put(VITAMIN_C, VITAMIN_C.getPersonalizedDailyIntake(userProfile));
+        intakes.put(VITAMIN_D, VITAMIN_D.getPersonalizedDailyIntake(userProfile));
+        intakes.put(VITAMIN_E, VITAMIN_E.getPersonalizedDailyIntake(userProfile));
+        
+        return intakes;
+    }
+
+    public static Nutrition getDailyIntakes(UserProfile userProfile) {
+        Map<NutrientType, Double> macronutrientIntakes = NutrientType.getAllMacronutrientIntakes(userProfile);
+        Map<NutrientType, Double> micronutrientIntakes = NutrientType.getAllMicronutrientIntakes(userProfile);
+        macronutrientIntakes.putAll(micronutrientIntakes);
+
+        return new Nutrition(macronutrientIntakes);
+    }
+    
+    /**
+     * 获取所有宏量营养素的每日摄入量建议
+     * @param userProfile 用户配置文件
+     * @return 宏量营养素每日摄入量建议
+     */
+    private static Map<NutrientType, Double> getAllMacronutrientIntakes(UserProfile userProfile) {
+        Map<NutrientType, Double> intakes = new HashMap<>();
+
+        double tdee = userProfile.calculateTDEE();
+        NutrientRatio ratio = NutrientRatio.calculateNutrientRatio(userProfile);
+
+        // 计算各营养素的克数
+        double carbsGrams = (tdee * ratio.getCarbRatio()) / 4.0;  // 4 kcal/g
+        double proteinGrams = (tdee * ratio.getProteinRatio()) / 4.0;  // 4 kcal/g
+        double fatGrams = (tdee * ratio.getFatRatio()) / 9.0;  // 9 kcal/g
+
+        intakes.put(CALORIES, tdee);
+        intakes.put(CARBOHYDRATES, carbsGrams);
+        intakes.put(PROTEIN, proteinGrams);
+        intakes.put(FAT, fatGrams);
+        
+        
+        return intakes;
+    }
+    
+    /**
      * 配置营养素达成率范围
      * @param userProfile 用户档案（包含健康状况）
      * @return 营养素达成率映射
      */
-    public static Map<NutrientType, double[]> configureNutrientAchievementRates(UserProfile userProfile) {
+    public static Map<NutrientType, double[]> getNutrientRates(UserProfile userProfile) {
         // 创建营养素达成率映射，使用默认值
         Map<NutrientType, double[]> nutrientRates = new HashMap<>();
         for (NutrientType nutrient : values()) {
@@ -183,8 +383,6 @@ public enum NutrientType {
         if (healthConditions == null || healthConditions.length == 0) {
             return; // 没有特殊健康状况，使用默认权重
         }
-        
-        
         for (HealthConditionType condition : healthConditions) {
             if (condition == null) continue;
             

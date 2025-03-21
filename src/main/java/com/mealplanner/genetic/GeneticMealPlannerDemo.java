@@ -4,6 +4,7 @@ package com.mealplanner.genetic;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import com.mealplanner.export.MealSolutionExcelExporter;
 import com.mealplanner.foodmanage.NutritionDataParser;
@@ -16,6 +17,7 @@ import com.mealplanner.genetic.util.NutritionCalculator;
 import com.mealplanner.model.Food;
 import com.mealplanner.model.FoodCategory;
 import com.mealplanner.model.HealthConditionType;
+import com.mealplanner.model.NutrientType;
 import com.mealplanner.model.Nutrition;
 import com.mealplanner.model.UserProfile;
 
@@ -49,8 +51,7 @@ public class GeneticMealPlannerDemo {
         NSGAIIConfiguration config = selectConfiguration();
         
         // 为每餐分配营养需求
-        NutritionCalculator nutritionCalculator = new NutritionCalculator(userProfile);
-        Nutrition dailyNeeds = nutritionCalculator.calculateDailyNutrientNeeds();
+        Nutrition dailyNeeds = NutrientType.getDailyIntakes(userProfile);
         //一餐的目标摄入量
         Nutrition targetNutrients=dailyNeeds.scale(0.35);
         
@@ -198,14 +199,15 @@ public class GeneticMealPlannerDemo {
         double magnesiumAchievement = actualNutrients.getMagnesium() / targetNutrients.getMagnesium() * 100;
         
         // 获取各营养素的达成率范围
-        double[] caloriesRange = planner.getNutrientAchievementRate("calories");
-        double[] carbsRange = planner.getNutrientAchievementRate("carbohydrates");
-        double[] proteinRange = planner.getNutrientAchievementRate("protein");
-        double[] fatRange = planner.getNutrientAchievementRate("fat");
-        double[] calciumRange = planner.getNutrientAchievementRate("calcium");
-        double[] potassiumRange = planner.getNutrientAchievementRate("potassium");
-        double[] sodiumRange = planner.getNutrientAchievementRate("sodium");
-        double[] magnesiumRange = planner.getNutrientAchievementRate("magnesium");
+        Map<NutrientType, double[]> nutrientRates = NutrientType.getNutrientRates(planner.getUserProfile());
+        double[] caloriesRange = nutrientRates.get(NutrientType.CALORIES);
+        double[] carbsRange = nutrientRates.get(NutrientType.CARBOHYDRATES);
+        double[] proteinRange = nutrientRates.get(NutrientType.PROTEIN);
+        double[] fatRange = nutrientRates.get(NutrientType.FAT);
+        double[] calciumRange = nutrientRates.get(NutrientType.CALCIUM);
+        double[] potassiumRange = nutrientRates.get(NutrientType.POTASSIUM);
+        double[] sodiumRange = nutrientRates.get(NutrientType.SODIUM);
+        double[] magnesiumRange = nutrientRates.get(NutrientType.MAGNESIUM);
         
         // 热量
         System.out.println("  热量: " + String.format("%.1f", actualNutrients.getCalories()) + 

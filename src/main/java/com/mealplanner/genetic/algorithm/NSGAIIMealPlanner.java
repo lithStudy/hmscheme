@@ -45,7 +45,7 @@ public class NSGAIIMealPlanner {
     private NSGAIILogger logger;
     
     // 不同营养素的达成率范围映射
-    private Map<String, double[]> nutrientAchievementRates = new HashMap<>();
+    private Map<NutrientType, double[]> nutrientRates = new HashMap<>();
     
     // 目标营养素，用于计算达成率
     private Nutrition targetNutrients;
@@ -67,20 +67,9 @@ public class NSGAIIMealPlanner {
         this.logger = new NSGAIILogger();
         
         // 使用 NutrientType 中的方法获取营养素达成率
-        Map<NutrientType, double[]> nutrientRates = NutrientType.configureNutrientAchievementRates(userProfile);
-        this.nutrientAchievementRates = convertToStringMap(nutrientRates);
+        nutrientRates = NutrientType.getNutrientRates(userProfile);
     }
     
-    /**
-     * 将NutrientType映射转换为String映射
-     */
-    private Map<String, double[]> convertToStringMap(Map<NutrientType, double[]> nutrientTypeMap) {
-        Map<String, double[]> stringMap = new HashMap<>();
-        for (Map.Entry<NutrientType, double[]> entry : nutrientTypeMap.entrySet()) {
-            stringMap.put(entry.getKey().getName(), entry.getValue());
-        }
-        return stringMap;
-    }
     
     /**
      * 生成一餐的膳食方案
@@ -96,7 +85,7 @@ public class NSGAIIMealPlanner {
         // mutation.setNutrientAchievementRateRange(minNutrientAchievementRate, maxNutrientAchievementRate);
         
         // 设置变异器的营养素达成率范围映射
-        mutation.setNutrientAchievementRates(nutrientAchievementRates);
+        mutation.setNutrientAchievementRates(nutrientRates);
         
         // 将目标营养素传递给变异器，以便精确计算营养素达成率
         mutation.setTargetNutrients(targetNutrients);
@@ -365,7 +354,7 @@ public class NSGAIIMealPlanner {
         // 检查主要营养素（热量、碳水、蛋白质、脂肪）
         if (targetNutrients.calories > 0) {
             double caloriesRatio = actualNutrients.calories / targetNutrients.calories;
-            double[] caloriesRange = getNutrientAchievementRate("calories");
+            double[] caloriesRange = nutrientRates.get(NutrientType.CALORIES);
             if (caloriesRatio < caloriesRange[0] || caloriesRatio > caloriesRange[1]) {
                 return false;
             }
@@ -373,7 +362,7 @@ public class NSGAIIMealPlanner {
         
         if (targetNutrients.carbohydrates > 0) {
             double carbsRatio = actualNutrients.carbohydrates / targetNutrients.carbohydrates;
-            double[] carbsRange = getNutrientAchievementRate("carbohydrates");
+            double[] carbsRange = nutrientRates.get(NutrientType.CARBOHYDRATES);
             if (carbsRatio < carbsRange[0] || carbsRatio > carbsRange[1]) {
                 return false;
             }
@@ -381,7 +370,7 @@ public class NSGAIIMealPlanner {
         
         if (targetNutrients.protein > 0) {
             double proteinRatio = actualNutrients.protein / targetNutrients.protein;
-            double[] proteinRange = getNutrientAchievementRate("protein");
+            double[] proteinRange = nutrientRates.get(NutrientType.PROTEIN);
             if (proteinRatio < proteinRange[0] || proteinRatio > proteinRange[1]) {
                 return false;
             }
@@ -389,7 +378,7 @@ public class NSGAIIMealPlanner {
         
         if (targetNutrients.fat > 0) {
             double fatRatio = actualNutrients.fat / targetNutrients.fat;
-            double[] fatRange = getNutrientAchievementRate("fat");
+            double[] fatRange = nutrientRates.get(NutrientType.FAT);
             if (fatRatio < fatRange[0] || fatRatio > fatRange[1]) {
                 return false;
             }
@@ -398,7 +387,7 @@ public class NSGAIIMealPlanner {
         // 微量元素可以选择性检查，这里也一并检查
         if (targetNutrients.calcium > 0) {
             double calciumRatio = actualNutrients.calcium / targetNutrients.calcium;
-            double[] calciumRange = getNutrientAchievementRate("calcium");
+            double[] calciumRange = nutrientRates.get(NutrientType.CALCIUM);
             if (calciumRatio < calciumRange[0] || calciumRatio > calciumRange[1]) {
                 return false;
             }
@@ -406,7 +395,7 @@ public class NSGAIIMealPlanner {
         
         if (targetNutrients.potassium > 0) {
             double potassiumRatio = actualNutrients.potassium / targetNutrients.potassium;
-            double[] potassiumRange = getNutrientAchievementRate("potassium");
+            double[] potassiumRange = nutrientRates.get(NutrientType.POTASSIUM);
             if (potassiumRatio < potassiumRange[0] || potassiumRatio > potassiumRange[1]) {
                 return false;
             }
@@ -414,7 +403,7 @@ public class NSGAIIMealPlanner {
         
         if (targetNutrients.sodium > 0) {
             double sodiumRatio = actualNutrients.sodium / targetNutrients.sodium;
-            double[] sodiumRange = getNutrientAchievementRate("sodium");
+            double[] sodiumRange = nutrientRates.get(NutrientType.SODIUM);
             if (sodiumRatio < sodiumRange[0] || sodiumRatio > sodiumRange[1]) {
                 return false;
             }
@@ -422,7 +411,7 @@ public class NSGAIIMealPlanner {
         
         if (targetNutrients.magnesium > 0) {
             double magnesiumRatio = actualNutrients.magnesium / targetNutrients.magnesium;
-            double[] magnesiumRange = getNutrientAchievementRate("magnesium");
+            double[] magnesiumRange = nutrientRates.get(NutrientType.MAGNESIUM);
             if (magnesiumRatio < magnesiumRange[0] || magnesiumRatio > magnesiumRange[1]) {
                 return false;
             }
@@ -471,17 +460,6 @@ public class NSGAIIMealPlanner {
     public void setConfig(NSGAIIConfiguration config) {
         this.config = config;
     }
-    
-    /**
-     * 获取特定营养素的达成率范围
-     * @param nutrientName 营养素名称
-     * @return 达成率范围数组 [最小达成率, 最大达成率]，如果未找到则返回默认范围
-     */
-    public double[] getNutrientAchievementRate(String nutrientName) {
-        return nutrientAchievementRates.getOrDefault(nutrientName, 
-                new double[]{0.9, 1.1}); // 使用NutrientObjectiveConfig中的默认值
-    }
-    
     /**
      * 计算营养素偏离度得分，热量权重更高
      */
@@ -522,6 +500,13 @@ public class NSGAIIMealPlanner {
         return totalDeviation / totalWeight;
     }
     
+
+    /**
+     * 获取用户个人信息
+     */
+    public UserProfile getUserProfile() {
+        return userProfile;
+    }
     
     /**
      * 记录当前代的信息

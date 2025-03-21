@@ -1,5 +1,7 @@
 package com.mealplanner.model;
 
+import java.util.Map;
+
 import lombok.Getter;
 
 /**
@@ -47,6 +49,19 @@ public class Nutrition {
         this.iron = iron;
         this.phosphorus = phosphorus;
         calculateCalories();
+    }
+
+    public Nutrition(Map<NutrientType, Double> intakesMap) {
+        this.calories = intakesMap.get(NutrientType.CALORIES);
+        this.carbohydrates = intakesMap.get(NutrientType.CARBOHYDRATES);
+        this.protein = intakesMap.get(NutrientType.PROTEIN);
+        this.fat = intakesMap.get(NutrientType.FAT);
+        this.calcium = intakesMap.get(NutrientType.CALCIUM);
+        this.potassium = intakesMap.get(NutrientType.POTASSIUM);
+        this.sodium = intakesMap.get(NutrientType.SODIUM);
+        this.magnesium = intakesMap.get(NutrientType.MAGNESIUM);
+        this.iron = intakesMap.get(NutrientType.IRON);
+        this.phosphorus = intakesMap.get(NutrientType.PHOSPHORUS);
     }
 
     private void calculateCalories() {
