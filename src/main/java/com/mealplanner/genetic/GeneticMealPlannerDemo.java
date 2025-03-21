@@ -13,7 +13,6 @@ import com.mealplanner.genetic.model.FoodGene;
 import com.mealplanner.genetic.model.MealSolution;
 import com.mealplanner.genetic.model.ObjectiveValue;
 import com.mealplanner.genetic.util.NSGAIIConfiguration;
-import com.mealplanner.genetic.util.NutritionCalculator;
 import com.mealplanner.model.Food;
 import com.mealplanner.model.FoodCategory;
 import com.mealplanner.model.HealthConditionType;
