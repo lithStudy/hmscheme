@@ -1,6 +1,10 @@
 package com.mealplanner.genetic;
 
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
 import com.mealplanner.export.MealSolutionExcelExporter;
 import com.mealplanner.foodmanage.NutritionDataParser;
 import com.mealplanner.genetic.algorithm.NSGAIIMealPlanner;
@@ -8,17 +12,11 @@ import com.mealplanner.genetic.model.FoodGene;
 import com.mealplanner.genetic.model.MealSolution;
 import com.mealplanner.genetic.model.ObjectiveValue;
 import com.mealplanner.genetic.util.NSGAIIConfiguration;
-import com.mealplanner.genetic.util.NutrientObjectiveConfig;
 import com.mealplanner.genetic.util.NutritionCalculator;
 import com.mealplanner.model.Food;
 import com.mealplanner.model.FoodCategory;
 import com.mealplanner.model.Nutrition;
 import com.mealplanner.model.UserProfile;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 
 /**
  * NSGA-II多目标遗传算法膳食规划演示类
@@ -54,11 +52,9 @@ public class GeneticMealPlannerDemo {
         Nutrition dailyNeeds = nutritionCalculator.calculateDailyNutrientNeeds();
         //一餐的目标摄入量
         Nutrition targetNutrients=dailyNeeds.scale(0.35);
-        // 配置营养素达成率范围，考虑用户的健康状况
-        Map<String, double[]> nutrientRates = NutrientObjectiveConfig.configureNutrientAchievementRatesLegacy(userProfile);
         
         // 创建NSGA-II膳食规划器
-        NSGAIIMealPlanner planner = new NSGAIIMealPlanner(config, foodDatabase, userProfile, nutrientRates);
+        NSGAIIMealPlanner planner = new NSGAIIMealPlanner(config, foodDatabase, userProfile);
         
         // 执行算法
         System.out.println("\n开始执行NSGA-II多目标遗传算法...");

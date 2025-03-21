@@ -1,5 +1,13 @@
 package com.mealplanner.genetic.algorithm;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 import com.mealplanner.genetic.model.MealSolution;
 import com.mealplanner.genetic.model.ObjectiveValue;
 import com.mealplanner.genetic.objectives.MultiObjectiveEvaluator;
@@ -10,20 +18,9 @@ import com.mealplanner.genetic.operators.MealSelection;
 import com.mealplanner.genetic.util.NSGAIIConfiguration;
 import com.mealplanner.genetic.util.NSGAIILogger;
 import com.mealplanner.model.Food;
+import com.mealplanner.model.NutrientType;
 import com.mealplanner.model.Nutrition;
 import com.mealplanner.model.UserProfile;
-import com.mealplanner.export.MealSolutionExcelExporter;
-import com.mealplanner.model.NutrientType;
-
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Collectors;
-import java.io.File;
-import java.util.LinkedHashMap;
 
 /**
  * NSGA-II多目标遗传算法膳食规划器
@@ -106,6 +103,7 @@ public class NSGAIIMealPlanner {
         
         // 优先使用营养素敏感度分析变异策略
         mutation.setMutationType(MutationType.NUTRIENT_SENSITIVITY);
+        // mutation.setMutationType(MutationType.COMPREHENSIVE);
         
         logger.startAlgorithm(config);
         
