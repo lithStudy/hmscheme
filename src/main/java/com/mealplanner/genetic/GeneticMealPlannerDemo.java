@@ -15,6 +15,7 @@ import com.mealplanner.genetic.util.NSGAIIConfiguration;
 import com.mealplanner.genetic.util.NutritionCalculator;
 import com.mealplanner.model.Food;
 import com.mealplanner.model.FoodCategory;
+import com.mealplanner.model.HealthConditionType;
 import com.mealplanner.model.Nutrition;
 import com.mealplanner.model.UserProfile;
 
@@ -107,7 +108,7 @@ public class GeneticMealPlannerDemo {
         System.out.println("体重：" + weight + "kg");
         System.out.println("活动水平系数：" + activity);
         
-        return new UserProfile(weight, height,age,gender, activity,new String[]{"hypertension", "diabetes"});
+        return new UserProfile(weight, height,age,gender, activity,new HealthConditionType[]{HealthConditionType.HYPERTENSION, HealthConditionType.DIABETES});
 
     }
     

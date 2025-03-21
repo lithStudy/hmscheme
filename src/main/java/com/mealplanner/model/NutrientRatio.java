@@ -37,7 +37,7 @@ public class NutrientRatio {
 
     // 计算营养素比例
     public static NutrientRatio calculateNutrientRatio(UserProfile userProfile) {
-        HealthConditionType[] conditions = HealthConditionType.fromNames(userProfile.getHealthConditions());    
+        HealthConditionType[] conditions = userProfile.getHealthConditions();
         if (conditions == null || conditions.length == 0) {
             // 默认健康人群的营养素比例
             return new NutrientRatio();

@@ -111,7 +111,7 @@ public enum NutrientType {
         
         // 根据用户健康状况调整营养素达成率
         if (userProfile != null && userProfile.getHealthConditions() != null) {
-            HealthConditionType[] healthConditions = HealthConditionType.fromNames(userProfile.getHealthConditions());
+            HealthConditionType[] healthConditions = userProfile.getHealthConditions();
             
             // 创建临时映射，存储所有疾病对每个营养素的要求
             Map<NutrientType, List<double[]>> allDiseaseRequirements = new HashMap<>();
@@ -167,7 +167,6 @@ public enum NutrientType {
         for (NutrientType nutrient : values()) {
             weights.put(nutrient, nutrient.defaultWeight);
         }
-        
         if (userProfile != null && userProfile.getHealthConditions() != null) {
             adjustWeightsByHealthConditions(userProfile.getHealthConditions(), weights);
         }
@@ -180,13 +179,11 @@ public enum NutrientType {
      * @param healthConditionNames 健康状况名称数组
      * @param nutrientWeights 营养素权重映射
      */
-    private static void adjustWeightsByHealthConditions(String[] healthConditionNames, Map<NutrientType, Double> nutrientWeights) {
-        if (healthConditionNames == null || healthConditionNames.length == 0) {
+    private static void adjustWeightsByHealthConditions(HealthConditionType[] healthConditions, Map<NutrientType, Double> nutrientWeights) {
+        if (healthConditions == null || healthConditions.length == 0) {
             return; // 没有特殊健康状况，使用默认权重
         }
         
-        // 将字符串数组转换为枚举数组
-        HealthConditionType[] healthConditions = HealthConditionType.fromNames(healthConditionNames);
         
         for (HealthConditionType condition : healthConditions) {
             if (condition == null) continue;

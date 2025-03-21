@@ -82,7 +82,7 @@ public class NutrientObjectiveConfig {
         // 根据用户健康状况调整营养素达成率
         if (userProfile != null && userProfile.getHealthConditions() != null) {
             // 将字符串数组转换为枚举数组
-            HealthConditionType[] healthConditions = HealthConditionType.fromNames(userProfile.getHealthConditions());
+            HealthConditionType[] healthConditions = userProfile.getHealthConditions();
             
             // 创建一个临时映射，用于存储所有疾病对每个营养素的要求
             Map<NutrientType, List<double[]>> allDiseaseRequirements = new HashMap<>();

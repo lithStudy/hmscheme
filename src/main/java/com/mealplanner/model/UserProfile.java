@@ -1,12 +1,15 @@
 package com.mealplanner.model;
 
+import lombok.Getter;
+
+@Getter
 public class UserProfile {
     private double weight;      // 体重(kg)
     private double height;      // 身高(cm)
     private int age;           // 年龄
     private String gender;     // 性别
     private double activityLevel; // 活动系数
-    private String[] healthConditions; // 健康状况（多种慢病）
+    private HealthConditionType[] healthConditions; // 健康状况（多种慢病）
     
     // 新增属性
     private String[] allergies;          // 过敏食物
@@ -17,7 +20,7 @@ public class UserProfile {
     private String[] cookingMethodPreferences; // 偏好的烹饪方式
 
     public UserProfile(double weight, double height, int age, String gender, 
-                      double activityLevel, String[] healthConditions) {
+                      double activityLevel, HealthConditionType[] healthConditions) {
         this.weight = weight;
         this.height = height;
         this.age = age;
@@ -32,27 +35,6 @@ public class UserProfile {
         this.cookingMethodPreferences = new String[0];
     }
     
-    /**
-     * 创建一个完整的用户档案（包含所有属性）
-     */
-    public UserProfile(double weight, double height, int age, String gender, 
-                      double activityLevel, String[] healthConditions,
-                      String[] allergies, String[] religiousBeliefs, 
-                      String[] flavorPreferences, String[] dislikedFoods,
-                      int spicyPreference, String[] cookingMethodPreferences) {
-        this.weight = weight;
-        this.height = height;
-        this.age = age;
-        this.gender = gender;
-        this.activityLevel = activityLevel;
-        this.healthConditions = healthConditions != null ? healthConditions : new String[0];
-        this.allergies = allergies != null ? allergies : new String[0];
-        this.religiousBeliefs = religiousBeliefs != null ? religiousBeliefs : new String[0];
-        this.flavorPreferences = flavorPreferences != null ? flavorPreferences : new String[0];
-        this.dislikedFoods = dislikedFoods != null ? dislikedFoods : new String[0];
-        this.spicyPreference = spicyPreference;
-        this.cookingMethodPreferences = cookingMethodPreferences != null ? cookingMethodPreferences : new String[0];
-    }
 
     // 计算BMR（基础代谢率）- 使用Mifflin-St Jeor公式
     public double calculateBMR() {
@@ -160,78 +142,5 @@ public class UserProfile {
         return foodSpicyLevel <= spicyPreference;
     }
 
-    // Getters
-    public double getWeight() { return weight; }
-    public double getHeight() { return height; }
-    public int getAge() { return age; }
-    public String getGender() { return gender; }
-    public double getActivityLevel() { return activityLevel; }
-    public String[] getHealthConditions() {
-        return healthConditions;
-    }
     
-    // Getters for new fields
-    public String[] getAllergies() { return allergies; }
-    public String[] getReligiousBeliefs() { return religiousBeliefs; }
-    public String[] getFlavorPreferences() { return flavorPreferences; }
-    public String[] getDislikedFoods() { return dislikedFoods; }
-    public int getSpicyPreference() { return spicyPreference; }
-    public String[] getCookingMethodPreferences() { return cookingMethodPreferences; }
-    
-    // Setters
-    /**
-     * 设置健康状况
-     * @param healthConditions 健康状况数组
-     */
-    public void setHealthConditions(String[] healthConditions) {
-        this.healthConditions = healthConditions;
-    }
-    
-    /**
-     * 设置过敏食物
-     * @param allergies 过敏食物数组
-     */
-    public void setAllergies(String[] allergies) {
-        this.allergies = allergies;
-    }
-    
-    /**
-     * 设置宗教信仰
-     * @param religiousBeliefs 宗教信仰数组
-     */
-    public void setReligiousBeliefs(String[] religiousBeliefs) {
-        this.religiousBeliefs = religiousBeliefs;
-    }
-    
-    /**
-     * 设置口味偏好
-     * @param flavorPreferences 口味偏好数组
-     */
-    public void setFlavorPreferences(String[] flavorPreferences) {
-        this.flavorPreferences = flavorPreferences;
-    }
-    
-    /**
-     * 设置不喜欢的食物
-     * @param dislikedFoods 不喜欢的食物数组
-     */
-    public void setDislikedFoods(String[] dislikedFoods) {
-        this.dislikedFoods = dislikedFoods;
-    }
-    
-    /**
-     * 设置辣度偏好
-     * @param spicyPreference 辣度偏好（0-5）
-     */
-    public void setSpicyPreference(int spicyPreference) {
-        this.spicyPreference = Math.max(0, Math.min(5, spicyPreference));
-    }
-    
-    /**
-     * 设置偏好的烹饪方式
-     * @param cookingMethodPreferences 偏好的烹饪方式数组
-     */
-    public void setCookingMethodPreferences(String[] cookingMethodPreferences) {
-        this.cookingMethodPreferences = cookingMethodPreferences;
-    }
 } 
