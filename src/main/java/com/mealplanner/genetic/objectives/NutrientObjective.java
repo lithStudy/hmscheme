@@ -6,13 +6,14 @@ import com.mealplanner.genetic.objectives.NutrientScoring.CalorieScoringStrategy
 import com.mealplanner.genetic.objectives.NutrientScoring.DefaultNutrientScoringStrategy;
 import com.mealplanner.genetic.objectives.NutrientScoring.NutrientScoringStrategy;
 import com.mealplanner.genetic.objectives.NutrientScoring.StrictExcessPenaltyScoringStrategy;
-import com.mealplanner.model.Nutrition;
 import com.mealplanner.model.NutrientType;
 import com.mealplanner.model.UserProfile;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 营养素目标类，评估解决方案在特定营养素上的表现
@@ -64,6 +65,8 @@ public class NutrientObjective extends AbstractObjectiveEvaluator {
         Map<NutrientType, double[]> nutrientRates = NutrientType.getNutrientRates(userProfile);
         // 获取营养素权重
         Map<NutrientType, Double> nutrientWeights = NutrientType.getNutrientWeights(userProfile);
+        // 自定义评估器的营养素类型
+        Set<NutrientType> customNutrientTypes = new HashSet<>();
 
         // 初始化热量目标评估器
         nutrientObjectives.add(new NutrientObjective(
@@ -71,18 +74,17 @@ public class NutrientObjective extends AbstractObjectiveEvaluator {
             nutrientWeights.get(NutrientType.CALORIES),
             new CalorieScoringStrategy(),
             nutrientRates));
+        customNutrientTypes.add(NutrientType.CALCIUM);
         // 初始化钠目标评估器
         nutrientObjectives.add(new NutrientObjective(
             NutrientType.SODIUM,
             nutrientWeights.get(NutrientType.SODIUM),
             new StrictExcessPenaltyScoringStrategy(),
             nutrientRates));
-
-
-        
-        // 添加除热量外的其他营养素目标
+        customNutrientTypes.add(NutrientType.SODIUM);
+        // 添加其他营养素目标
         for (NutrientType type : NutrientType.values()) {
-            if (type != NutrientType.CALORIES) { // 热量由 CalorieObjective 处理
+            if (!customNutrientTypes.contains(type)) { 
                 nutrientObjectives.add(new NutrientObjective(
                         type,
                         nutrientWeights.get(type),
@@ -101,8 +103,8 @@ public class NutrientObjective extends AbstractObjectiveEvaluator {
      * @return 目标值
      */
     @Override
-    public ObjectiveValue evaluate(MealSolution solution, Nutrition targetNutrients) {
-        Nutrition actualNutrients = solution.calculateTotalNutrients();
+    public ObjectiveValue evaluate(MealSolution solution, Map<NutrientType, Double> targetNutrients) {
+        Map<NutrientType, Double> actualNutrients = solution.calculateTotalNutrients();
         return evaluate(solution, actualNutrients, targetNutrients);
     }
     
@@ -113,10 +115,10 @@ public class NutrientObjective extends AbstractObjectiveEvaluator {
      * @param targetNutrients 目标营养素
      * @return 目标值
      */
-    public ObjectiveValue evaluate(MealSolution solution, Nutrition actualNutrients, Nutrition targetNutrients) {
+    public ObjectiveValue evaluate(MealSolution solution, Map<NutrientType, Double> actualNutrients, Map<NutrientType, Double> targetNutrients) {
         // 获取实际和目标营养素值
-        double actual = getNutrientValue(actualNutrients);
-        double target = getNutrientValue(targetNutrients);
+        double actual = actualNutrients.get(nutrientType);
+        double target = targetNutrients.get(nutrientType);
         
         // 计算营养素得分
         double score = calculateNutrientScore(actual, target);
@@ -130,35 +132,12 @@ public class NutrientObjective extends AbstractObjectiveEvaluator {
      * @param nutrients 营养素对象
      * @return 营养素值
      */
-    private double getNutrientValue(Nutrition nutrients) {
+    private double getNutrientValue(Map<NutrientType, Double> nutrients) {
         if (nutrientType == null) {
             return 0;
         }
+        return nutrients.get(nutrientType);
         
-        switch (nutrientType) {
-            case CALORIES:
-                return nutrients.getCalories();
-            case CARBOHYDRATES:
-                return nutrients.getCarbohydrates();
-            case PROTEIN:
-                return nutrients.getProtein();
-            case FAT:
-                return nutrients.getFat();
-            case CALCIUM:
-                return nutrients.getCalcium();
-            case POTASSIUM:
-                return nutrients.getPotassium();
-            case SODIUM:
-                return nutrients.getSodium();
-            case MAGNESIUM:
-                return nutrients.getMagnesium();
-            case IRON:
-                return nutrients.getIron();
-            case PHOSPHORUS:
-                return nutrients.getPhosphorus();
-            default:
-                return 0;
-        }
     }
     
     /**
@@ -185,37 +164,7 @@ public class NutrientObjective extends AbstractObjectiveEvaluator {
     public NutrientType getNutrientType() {
         return nutrientType;
     }
+
+
     
-    /**
-     * 设置营养素类型
-     * @param nutrientType 营养素类型
-     */
-    public void setNutrientType(NutrientType nutrientType) {
-        this.nutrientType = nutrientType;
-    }
-    
-    /**
-     * 获取营养素名称
-     * @return 营养素名称
-     */
-    public String getNutrientName() {
-        return nutrientType != null ? nutrientType.getName() : null;
-    }
-    
-    
-    /**
-     * 获取硬性约束阈值
-     * @return 硬性约束阈值
-     */
-    public double getHardConstraintThreshold() {
-        return hardConstraintThreshold;
-    }
-    
-    /**
-     * 设置硬性约束阈值
-     * @param hardConstraintThreshold 硬性约束阈值
-     */
-    public void setHardConstraintThreshold(double hardConstraintThreshold) {
-        this.hardConstraintThreshold = hardConstraintThreshold;
-    }
 }

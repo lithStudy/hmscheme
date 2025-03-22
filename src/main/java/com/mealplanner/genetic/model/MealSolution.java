@@ -2,7 +2,7 @@ package com.mealplanner.genetic.model;
 
 import com.mealplanner.model.Food;
 import com.mealplanner.model.FoodCategory;
-import com.mealplanner.model.Nutrition;
+import com.mealplanner.model.NutrientType;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -24,7 +24,7 @@ public class MealSolution {
     private List<ObjectiveValue> objectiveValues;
     
     // 缓存的营养素总和，避免重复计算
-    private Nutrition cachedTotalNutrients;
+    private Map<NutrientType, Double> cachedTotalNutrients;
     
     /**
      * 构造函数
@@ -189,49 +189,30 @@ public class MealSolution {
      * 计算解决方案的总营养素
      * @return 总营养素
      */
-    public Nutrition calculateTotalNutrients() {
+    public Map<NutrientType, Double> calculateTotalNutrients() {
         // 如果已经计算过，直接返回缓存结果
         if (cachedTotalNutrients != null) {
             return cachedTotalNutrients;
         }
         
-        double totalCalories = 0;
-        double totalCarbs = 0;
-        double totalProtein = 0;
-        double totalFat = 0;
-        double totalCalcium = 0;
-        double totalPotassium = 0;
-        double totalSodium = 0;
-        double totalMagnesium = 0;
-        
+        Map<NutrientType, Double> totalNutrients = NutrientType.initNutrientItem();
+
         for (FoodGene gene : foodGenes) {
             Food food = gene.getFood();
             double intake = gene.getIntake();
             double ratio = intake / 100.0; // 食物营养成分通常以每100g为单位
             
-            totalCalories += food.getNutrition().getCalories() * ratio;
-            totalCarbs += food.getNutrition().getCarbohydrates() * ratio;
-            totalProtein += food.getNutrition().getProtein() * ratio;
-            totalFat += food.getNutrition().getFat() * ratio;
-            totalCalcium += food.getNutrition().getCalcium() * ratio;
-            totalPotassium += food.getNutrition().getPotassium() * ratio;
-            totalSodium += food.getNutrition().getSodium() * ratio;
-            totalMagnesium += food.getNutrition().getMagnesium() * ratio;
+            for (NutrientType type : food.getNutritionItems().keySet()) {
+                double value = food.getNutritionItems().get(type) * ratio;
+                totalNutrients.merge(type, value, Double::sum);
+            }
         }
         
-        cachedTotalNutrients = new Nutrition(
-                totalCalories,
-                totalCarbs,
-                totalProtein,
-                totalFat,
-                totalCalcium,
-                totalPotassium,
-                totalSodium,
-                totalMagnesium
-        );
-        
-        return cachedTotalNutrients;
+        // 缓存结果
+        cachedTotalNutrients = totalNutrients;
+        return totalNutrients;
     }
+    
     
     /**
      * 添加食物

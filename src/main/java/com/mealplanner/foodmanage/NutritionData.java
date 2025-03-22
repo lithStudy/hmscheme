@@ -4,9 +4,14 @@ import com.alibaba.excel.annotation.ExcelProperty;
 import lombok.Data;
 
 import com.mealplanner.model.Food;
-import com.mealplanner.model.Nutrition;
 import com.mealplanner.model.Portion;
 import com.mealplanner.model.FoodCategory;
+import com.mealplanner.model.NutrientType;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 /**
  * 营养数据模型类，使用EasyExcel注解映射Excel列
@@ -157,17 +162,27 @@ public class NutritionData {
             double potassiumValue = parseDouble(potassium);
             double sodiumValue = parseDouble(sodium);
             double magnesiumValue = parseDouble(magnesium);
+            double ironValue = parseDouble(iron);
+            double phosphorusValue = parseDouble(phosphorus);
             
-            // 创建营养对象
-            Nutrition nutrition = new Nutrition(caloriesValue,
-                    carbsValue, proteinValue, fatValue, 
-                    calciumValue, potassiumValue, sodiumValue, magnesiumValue);
+            // 创建营养项列表
+            Map<NutrientType, Double> nutritionMap = new HashMap<>();
+            nutritionMap.put(NutrientType.CALORIES, caloriesValue);
+            nutritionMap.put(NutrientType.CARBOHYDRATES, carbsValue);
+            nutritionMap.put(NutrientType.PROTEIN, proteinValue);
+            nutritionMap.put(NutrientType.FAT, fatValue);
+            nutritionMap.put(NutrientType.CALCIUM, calciumValue);
+            nutritionMap.put(NutrientType.POTASSIUM, potassiumValue);
+            nutritionMap.put(NutrientType.SODIUM, sodiumValue);
+            nutritionMap.put(NutrientType.MAGNESIUM, magnesiumValue);
+            nutritionMap.put(NutrientType.IRON, ironValue);
+            nutritionMap.put(NutrientType.PHOSPHORUS, phosphorusValue);
             
             // 份量信息 - 假设标准份量为100克
             Portion portion = new Portion(100.0, "克", 100.0);
             
             // 创建并返回Food对象
-            return new Food(name, category, nutrition, portion);
+            return new Food(name, category, nutritionMap, portion);
         } catch (Exception e) {
             System.err.println("转换数据失败: " + e.getMessage());
             return null;

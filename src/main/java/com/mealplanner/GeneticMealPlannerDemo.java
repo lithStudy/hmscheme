@@ -1,10 +1,12 @@
-package com.mealplanner.genetic;
+package com.mealplanner;
 
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import com.mealplanner.export.MealSolutionExcelExporter;
 import com.mealplanner.foodmanage.NutritionDataParser;
@@ -17,7 +19,6 @@ import com.mealplanner.model.Food;
 import com.mealplanner.model.FoodCategory;
 import com.mealplanner.model.HealthConditionType;
 import com.mealplanner.model.NutrientType;
-import com.mealplanner.model.Nutrition;
 import com.mealplanner.model.UserProfile;
 
 /**
@@ -50,9 +51,13 @@ public class GeneticMealPlannerDemo {
         NSGAIIConfiguration config = selectConfiguration();
         
         // 为每餐分配营养需求
-        Nutrition dailyNeeds = NutrientType.getDailyIntakes(userProfile);
+        Map<NutrientType, Double> dailyNeeds = NutrientType.getDailyIntakes(userProfile);
         //一餐的目标摄入量
-        Nutrition targetNutrients=dailyNeeds.scale(0.35);
+        Map<NutrientType, Double> targetNutrients= dailyNeeds.entrySet().stream()
+        .collect(Collectors.toMap(
+            entry -> entry.getKey(),
+            entry -> entry.getValue() * 0.35
+        ));
         
         // 创建NSGA-II膳食规划器
         NSGAIIMealPlanner planner = new NSGAIIMealPlanner(config, foodDatabase, userProfile);
@@ -62,7 +67,7 @@ public class GeneticMealPlannerDemo {
         List<MealSolution> solutions = planner.generateMeal(targetNutrients, true);
         
         //导出到excel
-        MealSolutionExcelExporter.export(solutions, targetNutrients);
+        MealSolutionExcelExporter.export(solutions, targetNutrients,userProfile);
         
         // 显示结果
         displayResults(solutions, targetNutrients, planner);
@@ -140,7 +145,7 @@ public class GeneticMealPlannerDemo {
      * @param targetNutrients 目标营养素
      * @param planner 膳食规划器
      */
-    private static void displayResults(List<MealSolution> solutions, Nutrition targetNutrients, NSGAIIMealPlanner planner) {
+    private static void displayResults(List<MealSolution> solutions, Map<NutrientType, Double> targetNutrients, NSGAIIMealPlanner planner) {
         System.out.println("\n算法执行完成");
         System.out.println("====================================");
         System.out.println("找到 " + solutions.size() + " 个帕累托最优解");
@@ -165,7 +170,7 @@ public class GeneticMealPlannerDemo {
      * @param targetNutrients 目标营养素
      * @param planner 膳食规划器
      */
-    private static void displaySolutionSummary(MealSolution solution, Nutrition targetNutrients, NSGAIIMealPlanner planner) {
+    private static void displaySolutionSummary(MealSolution solution, Map<NutrientType, Double> targetNutrients, NSGAIIMealPlanner planner) {
         // 获取营养素达成率阈值
         // double minRate = planner.getMinNutrientAchievementRate() * 100; // 转换为百分比
         // double maxRate = planner.getMaxNutrientAchievementRate() * 100; // 转换为百分比
@@ -184,82 +189,55 @@ public class GeneticMealPlannerDemo {
         }
         
         // 显示营养素总值和目标比较
-        Nutrition actualNutrients = solution.calculateTotalNutrients();
+        Map<NutrientType, Double> actualNutrients = solution.calculateTotalNutrients();
         System.out.println("\n营养素比较 (实际 / 目标)：");
-        
-        // 计算并展示所有营养素的达成率
-        double caloriesAchievement = actualNutrients.getCalories() / targetNutrients.getCalories() * 100;
-        double carbsAchievement = actualNutrients.getCarbohydrates() / targetNutrients.getCarbohydrates() * 100;
-        double proteinAchievement = actualNutrients.getProtein() / targetNutrients.getProtein() * 100;
-        double fatAchievement = actualNutrients.getFat() / targetNutrients.getFat() * 100;
-        double calciumAchievement = actualNutrients.getCalcium() / targetNutrients.getCalcium() * 100;
-        double potassiumAchievement = actualNutrients.getPotassium() / targetNutrients.getPotassium() * 100;
-        double sodiumAchievement = actualNutrients.getSodium() / targetNutrients.getSodium() * 100;
-        double magnesiumAchievement = actualNutrients.getMagnesium() / targetNutrients.getMagnesium() * 100;
         
         // 获取各营养素的达成率范围
         Map<NutrientType, double[]> nutrientRates = NutrientType.getNutrientRates(planner.getUserProfile());
-        double[] caloriesRange = nutrientRates.get(NutrientType.CALORIES);
-        double[] carbsRange = nutrientRates.get(NutrientType.CARBOHYDRATES);
-        double[] proteinRange = nutrientRates.get(NutrientType.PROTEIN);
-        double[] fatRange = nutrientRates.get(NutrientType.FAT);
-        double[] calciumRange = nutrientRates.get(NutrientType.CALCIUM);
-        double[] potassiumRange = nutrientRates.get(NutrientType.POTASSIUM);
-        double[] sodiumRange = nutrientRates.get(NutrientType.SODIUM);
-        double[] magnesiumRange = nutrientRates.get(NutrientType.MAGNESIUM);
         
-        // 热量
-        System.out.println("  热量: " + String.format("%.1f", actualNutrients.getCalories()) + 
-                         " / " + String.format("%.1f", targetNutrients.getCalories()) + " kcal, " +
-                         "达成率: " + String.format("%.1f%%", caloriesAchievement) + 
-                         formatAchievementStatus(caloriesAchievement, caloriesRange[0] * 100, caloriesRange[1] * 100));
-        
-        // 碳水化合物
-        System.out.println("  碳水: " + String.format("%.1f", actualNutrients.getCarbohydrates()) + 
-                         " / " + String.format("%.1f", targetNutrients.getCarbohydrates()) + " g, " +
-                         "达成率: " + String.format("%.1f%%", carbsAchievement) + 
-                         formatAchievementStatus(carbsAchievement, carbsRange[0] * 100, carbsRange[1] * 100));
-        
-        // 蛋白质
-        System.out.println("  蛋白质: " + String.format("%.1f", actualNutrients.getProtein()) + 
-                         " / " + String.format("%.1f", targetNutrients.getProtein()) + " g, " +
-                         "达成率: " + String.format("%.1f%%", proteinAchievement) + 
-                         formatAchievementStatus(proteinAchievement, proteinRange[0] * 100, proteinRange[1] * 100));
-        
-        // 脂肪
-        System.out.println("  脂肪: " + String.format("%.1f", actualNutrients.getFat()) + 
-                         " / " + String.format("%.1f", targetNutrients.getFat()) + " g, " +
-                         "达成率: " + String.format("%.1f%%", fatAchievement) + 
-                         formatAchievementStatus(fatAchievement, fatRange[0] * 100, fatRange[1] * 100));
-        
-        // 钙
-        System.out.println("  钙: " + String.format("%.1f", actualNutrients.getCalcium()) + 
-                         " / " + String.format("%.1f", targetNutrients.getCalcium()) + " mg, " +
-                         "达成率: " + String.format("%.1f%%", calciumAchievement) + 
-                         formatAchievementStatus(calciumAchievement, calciumRange[0] * 100, calciumRange[1] * 100));
-        
-        // 钾
-        System.out.println("  钾: " + String.format("%.1f", actualNutrients.getPotassium()) + 
-                         " / " + String.format("%.1f", targetNutrients.getPotassium()) + " mg, " +
-                         "达成率: " + String.format("%.1f%%", potassiumAchievement) + 
-                         formatAchievementStatus(potassiumAchievement, potassiumRange[0] * 100, potassiumRange[1] * 100));
-        
-        // 钠
-        System.out.println("  钠: " + String.format("%.1f", actualNutrients.getSodium()) + 
-                         " / " + String.format("%.1f", targetNutrients.getSodium()) + " mg, " +
-                         "达成率: " + String.format("%.1f%%", sodiumAchievement) + 
-                         formatAchievementStatus(sodiumAchievement, sodiumRange[0] * 100, sodiumRange[1] * 100));
-        
-        // 镁
-        System.out.println("  镁: " + String.format("%.1f", actualNutrients.getMagnesium()) + 
-                         " / " + String.format("%.1f", targetNutrients.getMagnesium()) + " mg, " +
-                         "达成率: " + String.format("%.1f%%", magnesiumAchievement) + 
-                         formatAchievementStatus(magnesiumAchievement, magnesiumRange[0] * 100, magnesiumRange[1] * 100));
-        
+        // 定义需要显示的营养素列表
+        List<NutrientType> nutrientsToDisplay = Arrays.asList(
+            NutrientType.CALORIES,
+            NutrientType.CARBOHYDRATES,
+            NutrientType.PROTEIN,
+            NutrientType.FAT,
+            NutrientType.CALCIUM,
+            NutrientType.POTASSIUM,
+            NutrientType.SODIUM,
+            NutrientType.MAGNESIUM,
+            NutrientType.IRON,
+            NutrientType.PHOSPHORUS,
+            NutrientType.ZINC,
+            NutrientType.VITAMIN_A,
+            NutrientType.VITAMIN_C,
+            NutrientType.VITAMIN_D,
+            NutrientType.VITAMIN_E
+        );
+
+        // 遍历显示每种营养素的信息
+        for (NutrientType nutrientType : nutrientsToDisplay) {
+            String unit = nutrientType.getUnit();
+            String name = nutrientType.getDisplayName();
+            
+            double actualValue = actualNutrients.get(nutrientType);
+            double targetValue = targetNutrients.get(nutrientType);
+            
+            double achievement = targetValue > 0 ? (actualValue / targetValue * 100) : 0;
+            double[] range = nutrientRates.get(nutrientType);
+            
+            System.out.println(String.format("  %s: %.1f / %.1f %s, 达成率: %.1f%% %s",
+                name,
+                actualValue,
+                targetValue,
+                unit,
+                achievement,
+                formatAchievementStatus(achievement, range[0] * 100, range[1] * 100)
+            ));
+        }
         // 计算三大营养素的热量比例
-        double carbsCalories = actualNutrients.getCarbohydrates() * 4;
-        double proteinCalories = actualNutrients.getProtein() * 4;
-        double fatCalories = actualNutrients.getFat() * 9;
+        double carbsCalories = actualNutrients.get(NutrientType.CARBOHYDRATES) * 4;
+        double proteinCalories = actualNutrients.get(NutrientType.PROTEIN) * 4;
+        double fatCalories = actualNutrients.get(NutrientType.FAT) * 9;
         double totalMacroCalories = carbsCalories + proteinCalories + fatCalories;
         
         if (totalMacroCalories > 0) {

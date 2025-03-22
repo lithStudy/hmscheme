@@ -13,28 +13,31 @@ import lombok.Getter;
  */
 @Getter
 public enum NutrientType {
-    CALORIES("calories", "热量", true, 3.0, new double[]{0.9, 1.1}, 2000.0),
-    CARBOHYDRATES("carbohydrates", "碳水化合物", true, 1.0, new double[]{0.85, 1.15}, 250.0),
-    PROTEIN("protein", "蛋白质", true, 1.0, new double[]{0.9, 1.2}, 70.0),
-    FAT("fat", "脂肪", true, 0.8, new double[]{0.7, 1.1}, 60.0),
-    FIBER("fiber", "膳食纤维", true, 0.5, new double[]{0.8, 1.5}, 25.0),
-    CALCIUM("calcium", "钙", false, 0.7, new double[]{0.8, 1.5}, 1000.0),
-    POTASSIUM("potassium", "钾", false, 0.7, new double[]{0.8, 1.5}, 3500.0),
-    SODIUM("sodium", "钠", true, 0.8, new double[]{0.5, 1.0}, 2000.0),
-    MAGNESIUM("magnesium", "镁", false, 0.7, new double[]{0.8, 1.5}, 350.0),
-    IRON("iron", "铁", false, 0.7, new double[]{0.8, 1.5}, 10.0),
-    PHOSPHORUS("phosphorus", "磷", false, 0.7, new double[]{0.8, 1.5}, 700.0),
-    ZINC("zinc", "锌", false, 0.7, new double[]{0.8, 1.5}, 10.0),
-    VITAMIN_A("vitamin_a", "维生素A", false, 0.7, new double[]{0.8, 1.5}, 800.0),
-    VITAMIN_C("vitamin_c", "维生素C", false, 0.7, new double[]{0.8, 1.5}, 80.0),
-    VITAMIN_D("vitamin_d", "维生素D", false, 0.7, new double[]{0.8, 1.5}, 10.0),
-    VITAMIN_E("vitamin_e", "维生素E", false, 0.7, new double[]{0.8, 1.5}, 15.0);
+    CALORIES("calories", "热量", "kcal", true, 3.0, new double[]{0.9, 1.1}, 2000.0),
+    CARBOHYDRATES("carbohydrates", "碳水化合物", "g", true, 1.0, new double[]{0.85, 1.15}, 250.0),
+    PROTEIN("protein", "蛋白质", "g", true, 1.0, new double[]{0.9, 1.2}, 70.0),
+    FAT("fat", "脂肪", "g", true, 0.8, new double[]{0.7, 1.1}, 60.0),
+    FIBER("fiber", "膳食纤维", "g", true, 0.5, new double[]{0.8, 1.5}, 25.0),
+    CALCIUM("calcium", "钙", "mg", false, 0.7, new double[]{0.8, 1.5}, 1000.0),
+    POTASSIUM("potassium", "钾", "mg", false, 0.7, new double[]{0.8, 1.5}, 3500.0),
+    SODIUM("sodium", "钠", "mg", true, 0.8, new double[]{0.5, 1.0}, 2000.0),
+    MAGNESIUM("magnesium", "镁", "mg", false, 0.7, new double[]{0.8, 1.5}, 350.0),
+    IRON("iron", "铁", "mg", false, 0.7, new double[]{0.8, 1.5}, 10.0),
+    PHOSPHORUS("phosphorus", "磷", "mg", false, 0.7, new double[]{0.8, 1.5}, 700.0),
+    ZINC("zinc", "锌", "mg", false, 0.7, new double[]{0.8, 1.5}, 10.0),
+    VITAMIN_A("vitamin_a", "维生素A", "μg", false, 0.7, new double[]{0.8, 1.5}, 800.0),
+    VITAMIN_C("vitamin_c", "维生素C", "mg", false, 0.7, new double[]{0.8, 1.5}, 80.0),
+    VITAMIN_D("vitamin_d", "维生素D", "μg", false, 0.7, new double[]{0.8, 1.5}, 10.0),
+    VITAMIN_E("vitamin_e", "维生素E", "mg", false, 0.7, new double[]{0.8, 1.5}, 15.0);
     
     // 营养素的英文名称
     private final String name;
     
     // 营养素的中文名称
     private final String displayName;
+    
+    // 营养素的单位
+    private final String unit;
     
     // 是否默认惩罚过量
     private final boolean defaultPenalizeExcess;
@@ -62,10 +65,11 @@ public enum NutrientType {
     /**
      * 构造函数
      */
-    NutrientType(String name, String displayName, boolean defaultPenalizeExcess, 
+    NutrientType(String name, String displayName, String unit, boolean defaultPenalizeExcess, 
                 double defaultWeight, double[] defaultAchievementRange, double defaultDailyIntake) {
         this.name = name;
         this.displayName = displayName;
+        this.unit = unit;
         this.defaultPenalizeExcess = defaultPenalizeExcess;
         this.defaultWeight = defaultWeight;
         this.defaultAchievementRange = defaultAchievementRange;
@@ -240,44 +244,21 @@ public enum NutrientType {
         return getNutrientRates(userProfile);
     }
     
-    /**
-     * 获取所有微量元素的每日摄入量建议
-     * @param userProfile 用户配置文件
-     * @return 微量元素每日摄入量建议
-     */
-    public static Map<NutrientType, Double> getAllMicronutrientIntakes(UserProfile userProfile) {
-        Map<NutrientType, Double> intakes = new HashMap<>();
-        
-        // 仅选择微量元素
-        intakes.put(CALCIUM, CALCIUM.getPersonalizedDailyIntake(userProfile));
-        intakes.put(POTASSIUM, POTASSIUM.getPersonalizedDailyIntake(userProfile));
-        intakes.put(SODIUM, SODIUM.getPersonalizedDailyIntake(userProfile));
-        intakes.put(MAGNESIUM, MAGNESIUM.getPersonalizedDailyIntake(userProfile));
-        intakes.put(IRON, IRON.getPersonalizedDailyIntake(userProfile));
-        intakes.put(PHOSPHORUS, PHOSPHORUS.getPersonalizedDailyIntake(userProfile));
-        intakes.put(ZINC, ZINC.getPersonalizedDailyIntake(userProfile));
-        intakes.put(VITAMIN_A, VITAMIN_A.getPersonalizedDailyIntake(userProfile));
-        intakes.put(VITAMIN_C, VITAMIN_C.getPersonalizedDailyIntake(userProfile));
-        intakes.put(VITAMIN_D, VITAMIN_D.getPersonalizedDailyIntake(userProfile));
-        intakes.put(VITAMIN_E, VITAMIN_E.getPersonalizedDailyIntake(userProfile));
-        
-        return intakes;
+   
+
+    public static Map<NutrientType, Double> getDailyIntakes(UserProfile userProfile) {
+        Map<NutrientType, Double> macronutrientIntakes = NutrientType.getAllNutrientIntakes(userProfile);
+        return macronutrientIntakes;
     }
 
-    public static Nutrition getDailyIntakes(UserProfile userProfile) {
-        Map<NutrientType, Double> macronutrientIntakes = NutrientType.getAllMacronutrientIntakes(userProfile);
-        Map<NutrientType, Double> micronutrientIntakes = NutrientType.getAllMicronutrientIntakes(userProfile);
-        macronutrientIntakes.putAll(micronutrientIntakes);
 
-        return new Nutrition(macronutrientIntakes);
-    }
     
     /**
-     * 获取所有宏量营养素的每日摄入量建议
+     * 获取所有营养素的每日摄入量建议
      * @param userProfile 用户配置文件
      * @return 宏量营养素每日摄入量建议
      */
-    private static Map<NutrientType, Double> getAllMacronutrientIntakes(UserProfile userProfile) {
+    private static Map<NutrientType, Double> getAllNutrientIntakes(UserProfile userProfile) {
         Map<NutrientType, Double> intakes = new HashMap<>();
 
         double tdee = userProfile.calculateTDEE();
@@ -292,8 +273,15 @@ public enum NutrientType {
         intakes.put(CARBOHYDRATES, carbsGrams);
         intakes.put(PROTEIN, proteinGrams);
         intakes.put(FAT, fatGrams);
-        
-        
+
+
+        // 使用循环整合微量元素
+        for(NutrientType nutrient : values()) {
+            if(nutrient!=CALORIES && nutrient!=CARBOHYDRATES && nutrient!=PROTEIN && nutrient!=FAT) {
+                intakes.put(nutrient, nutrient.getPersonalizedDailyIntake(userProfile));
+            }
+        }
+
         return intakes;
     }
     
@@ -439,5 +427,17 @@ public enum NutrientType {
                     break;
             }
         }
+    }
+
+    /**
+     * 获取营养素默认权重
+     * @return 营养素默认权重
+     */
+    public static Map<NutrientType, Double> initNutrientItem() {
+        Map<NutrientType, Double> nutrientItems = new HashMap<>();
+        for (NutrientType nutrientType : values()) {
+            nutrientItems.put(nutrientType, 0.0);
+        }
+        return nutrientItems;
     }
 } 

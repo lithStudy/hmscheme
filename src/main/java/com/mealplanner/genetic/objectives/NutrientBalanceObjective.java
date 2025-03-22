@@ -4,7 +4,7 @@ import com.mealplanner.genetic.model.FoodGene;
 import com.mealplanner.genetic.model.MealSolution;
 import com.mealplanner.genetic.model.ObjectiveValue;
 import com.mealplanner.model.NutrientRatio;
-import com.mealplanner.model.Nutrition;
+import com.mealplanner.model.NutrientType;
 import com.mealplanner.model.UserProfile;
 
 import java.util.*;
@@ -54,7 +54,7 @@ public class NutrientBalanceObjective extends AbstractObjectiveEvaluator {
      * @return 目标值
      */
     @Override
-    public ObjectiveValue evaluate(MealSolution solution, Nutrition targetNutrients) {
+    public ObjectiveValue evaluate(MealSolution solution, Map<NutrientType, Double> targetNutrients) {
         List<FoodGene> genes = solution.getFoodGenes();
         
         if (genes.isEmpty()) {
@@ -81,9 +81,9 @@ public class NutrientBalanceObjective extends AbstractObjectiveEvaluator {
      */
     private double evaluateMacroNutrientRatio(MealSolution solution) {
         // 获取当前膳食的总营养素
-        double carbs = solution.calculateTotalNutrients().carbohydrates;
-        double protein = solution.calculateTotalNutrients().protein;
-        double fat = solution.calculateTotalNutrients().fat;
+        double carbs = solution.calculateTotalNutrients().get(NutrientType.CARBOHYDRATES);
+        double protein = solution.calculateTotalNutrients().get(NutrientType.PROTEIN);
+        double fat = solution.calculateTotalNutrients().get(NutrientType.FAT);
         
         // 计算宏量营养素热量
         double carbsCalories = carbs * 4;
@@ -120,12 +120,12 @@ public class NutrientBalanceObjective extends AbstractObjectiveEvaluator {
      * @param targetNutrients 目标营养素
      * @return 摄入量合理性得分（0-1之间）
      */
-    private double evaluateIntakeRationality(MealSolution solution, Nutrition targetNutrients) {
+    private double evaluateIntakeRationality(MealSolution solution, Map<NutrientType, Double> targetNutrients) {
         // 获取总热量
-        double totalCalories = solution.calculateTotalNutrients().calories;
+        double totalCalories = solution.calculateTotalNutrients().get(NutrientType.CALORIES);
         
         // 评分：热量接近目标值
-        double caloriesScore = 1.0 - Math.min(1.0, Math.abs(totalCalories - targetNutrients.calories) / targetNutrients.calories);
+        double caloriesScore = 1.0 - Math.min(1.0, Math.abs(totalCalories - targetNutrients.get(NutrientType.CALORIES)) / targetNutrients.get(NutrientType.CALORIES));
         
         // 评分：单个食物摄入量合理性
         double intakeRationalityScore = 0;

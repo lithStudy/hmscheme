@@ -1,8 +1,10 @@
 package com.mealplanner.genetic.objectives;
 
+import java.util.Map;
+
 import com.mealplanner.genetic.model.MealSolution;
 import com.mealplanner.genetic.model.ObjectiveValue;
-import com.mealplanner.model.Nutrition;
+import com.mealplanner.model.NutrientType;
 
 /**
  * 目标评估器抽象类，定义评估膳食解决方案的基本方法和通用实现
@@ -39,7 +41,7 @@ public abstract class AbstractObjectiveEvaluator {
      * @param targetNutrients 目标营养素
      * @return 目标值
      */
-    public abstract ObjectiveValue evaluate(MealSolution solution, Nutrition targetNutrients);
+    public abstract ObjectiveValue evaluate(MealSolution solution, Map<NutrientType, Double> targetNutrients);
     
     /**
      * 获取目标名称

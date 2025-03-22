@@ -3,6 +3,7 @@ package com.mealplanner.genetic.objectives;
 import com.mealplanner.model.UserProfile;
 import com.mealplanner.genetic.model.MealSolution;
 import com.mealplanner.genetic.model.ObjectiveValue;
+import com.mealplanner.model.NutrientType;
 import com.mealplanner.model.Nutrition;
 import java.util.*;
 
@@ -40,7 +41,7 @@ public class MultiObjectiveEvaluator {
      * @param targetNutrients 目标营养素
      * @return 目标值列表
      */
-    public List<ObjectiveValue> evaluate(MealSolution solution, Nutrition targetNutrients) {
+    public List<ObjectiveValue> evaluate(MealSolution solution, Map<NutrientType, Double> targetNutrients) {
         List<ObjectiveValue> objectiveValues = new ArrayList<>();
         // 评估营养素目标
         for (NutrientObjective objective : nutrientObjectives) {
@@ -90,7 +91,7 @@ public class MultiObjectiveEvaluator {
     public boolean isSolutionGoodEnough(MealSolution solution) {
         // 检查所有硬性约束是否满足
         for (ObjectiveValue value : solution.getObjectiveValues()) {
-            if (value.isHardConstraint() && !value.isHardConstraintSatisfied()) {
+            if (!value.isHardConstraintSatisfied()) {
                 return false;
             }
         }

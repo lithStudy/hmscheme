@@ -4,10 +4,11 @@ import com.mealplanner.genetic.model.FoodGene;
 import com.mealplanner.genetic.model.MealSolution;
 import com.mealplanner.genetic.model.ObjectiveValue;
 import com.mealplanner.model.Food;
+import com.mealplanner.model.NutrientType;
 import com.mealplanner.model.UserProfile;
-import com.mealplanner.model.Nutrition;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 用户偏好目标类，评估解决方案与用户偏好的匹配度
@@ -49,7 +50,7 @@ public class UserPreferenceObjective extends AbstractObjectiveEvaluator {
      * @return 目标值
      */
     @Override
-    public ObjectiveValue evaluate(MealSolution solution, Nutrition targetNutrients) {
+    public ObjectiveValue evaluate(MealSolution solution, Map<NutrientType, Double> targetNutrients) {
         return evaluate(solution);
     }
     

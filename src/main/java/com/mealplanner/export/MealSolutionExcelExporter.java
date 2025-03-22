@@ -1,18 +1,19 @@
 package com.mealplanner.export;
 
-import com.alibaba.excel.EasyExcel;
-import com.mealplanner.genetic.model.FoodGene;
-import com.mealplanner.genetic.model.MealSolution;
-import com.mealplanner.genetic.model.ObjectiveValue;
-import com.mealplanner.model.Nutrition;
-
 import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.Scanner;
+import java.util.Map;
 import java.util.stream.Collectors;
+
+import com.alibaba.excel.EasyExcel;
+import com.mealplanner.genetic.model.FoodGene;
+import com.mealplanner.genetic.model.MealSolution;
+import com.mealplanner.genetic.model.ObjectiveValue;
+import com.mealplanner.model.NutrientType;
+import com.mealplanner.model.UserProfile;
 
 /**
  * 膳食方案Excel导出工具类
@@ -21,7 +22,7 @@ public class MealSolutionExcelExporter {
     
     private static final String DEFAULT_SHEET_NAME = "膳食方案";
 
-    public static void export(List<MealSolution> solutions,Nutrition targetNutrients){
+    public static void export(List<MealSolution> solutions,Map<NutrientType, Double> targetNutrients,UserProfile userProfile){
         // 添加导出到Excel的功能
         // 设置Excel文件路径
         String defaultExcelFilePath = "meal_solutions.xlsx";
@@ -52,7 +53,7 @@ public class MealSolutionExcelExporter {
             System.out.println("\nExcel文件 '" + defaultExcelFilePath + "' 不存在，将创建新文件。");
         }
         
-        exportToExcel(solutions, targetNutrients, excelFilePath);
+        exportToExcel(solutions, targetNutrients, excelFilePath,userProfile);
         System.out.println("膳食方案已导出到Excel文件: " + excelFilePath);
     }
 
@@ -63,8 +64,8 @@ public class MealSolutionExcelExporter {
      * @param targetNutrients 目标营养素
      * @param filePath 文件路径
      */
-    private static void exportToExcel(List<MealSolution> solutions, Nutrition targetNutrients, String filePath) {
-        List<MealSolutionExcelData> dataList = convertToExcelData(solutions, targetNutrients);
+    private static void exportToExcel(List<MealSolution> solutions, Map<NutrientType, Double> targetNutrients, String filePath,UserProfile userProfile) {
+        List<MealSolutionExcelData> dataList = convertToExcelData(solutions, targetNutrients,userProfile);
         
         // 检查文件是否存在
         File file = new File(filePath);
@@ -142,7 +143,7 @@ public class MealSolutionExcelExporter {
      * @param targetNutrients 目标营养素
      * @return Excel数据模型列表
      */
-    private static List<MealSolutionExcelData> convertToExcelData(List<MealSolution> solutions, Nutrition targetNutrients) {
+    private static List<MealSolutionExcelData> convertToExcelData(List<MealSolution> solutions, Map<NutrientType, Double> targetNutrients,UserProfile userProfile) {
         List<MealSolutionExcelData> dataList = new ArrayList<>();
         
         // 生成时间戳，用于标识同一批次的方案
@@ -159,7 +160,7 @@ public class MealSolutionExcelExporter {
             data.setFoodList(formatFoodList(solution.getFoodGenes()));
             
             // 设置营养素达成率
-            setNutrientAchievements(data, solution, targetNutrients);
+            setNutrientAchievements(data, solution, targetNutrients,userProfile);
             
             // 设置三大营养素热量比例
             setMacroNutrientPercentages(data, solution);
@@ -168,7 +169,7 @@ public class MealSolutionExcelExporter {
             setObjectiveScores(data, solution);
             
             // 计算并设置营养素偏离度
-            calculateAndSetDeviationScore(data, solution, targetNutrients);
+            calculateAndSetDeviationScore(data, solution, targetNutrients,userProfile);
             
             dataList.add(data);
         }
@@ -188,53 +189,53 @@ public class MealSolutionExcelExporter {
     }
     
     /**
-     * 设置营养素达成率
+     * 设置营养素目标达成情况
      * @param data Excel数据模型
      * @param solution 膳食方案
      * @param targetNutrients 目标营养素
      */
-    private static void setNutrientAchievements(MealSolutionExcelData data, MealSolution solution, Nutrition targetNutrients) {
-        Nutrition actualNutrients = solution.calculateTotalNutrients();
+    private static void setNutrientAchievements(MealSolutionExcelData data, MealSolution solution, Map<NutrientType, Double> targetNutrients,UserProfile userProfile) {
+        Map<NutrientType, Double> actualNutrients = solution.calculateTotalNutrients();
         
         // 计算各营养素的达成率
-        if (targetNutrients.calories > 0) {
-            double ratio = actualNutrients.calories / targetNutrients.calories;
-            data.setCaloriesAchievement(formatRatio(ratio) + " (" + (int)actualNutrients.calories + "/" + (int)targetNutrients.calories + ")");
+        if (targetNutrients.get(NutrientType.CALORIES) > 0) {
+            double ratio = actualNutrients.get(NutrientType.CALORIES) / targetNutrients.get(NutrientType.CALORIES);
+            data.setCaloriesAchievement(formatRatio(ratio) + " (" + actualNutrients.get(NutrientType.CALORIES).intValue() + "/" + targetNutrients.get(NutrientType.CALORIES).intValue() + ")");
         }
         
-        if (targetNutrients.carbohydrates > 0) {
-            double ratio = actualNutrients.carbohydrates / targetNutrients.carbohydrates;
-            data.setCarbsAchievement(formatRatio(ratio) + " (" + formatDecimal(actualNutrients.carbohydrates) + "/" + formatDecimal(targetNutrients.carbohydrates) + ")");
+        if (targetNutrients.get(NutrientType.CARBOHYDRATES) > 0) {
+            double ratio = actualNutrients.get(NutrientType.CARBOHYDRATES) / targetNutrients.get(NutrientType.CARBOHYDRATES);
+            data.setCarbsAchievement(formatRatio(ratio) + " (" + formatDecimal(actualNutrients.get(NutrientType.CARBOHYDRATES)) + "/" + formatDecimal(targetNutrients.get(NutrientType.CARBOHYDRATES)) + ")");
         }
         
-        if (targetNutrients.protein > 0) {
-            double ratio = actualNutrients.protein / targetNutrients.protein;
-            data.setProteinAchievement(formatRatio(ratio) + " (" + formatDecimal(actualNutrients.protein) + "/" + formatDecimal(targetNutrients.protein) + ")");
+        if (targetNutrients.get(NutrientType.PROTEIN) > 0) {
+            double ratio = actualNutrients.get(NutrientType.PROTEIN) / targetNutrients.get(NutrientType.PROTEIN);
+            data.setProteinAchievement(formatRatio(ratio) + " (" + formatDecimal(actualNutrients.get(NutrientType.PROTEIN)) + "/" + formatDecimal(targetNutrients.get(NutrientType.PROTEIN)) + ")");
         }
         
-        if (targetNutrients.fat > 0) {
-            double ratio = actualNutrients.fat / targetNutrients.fat;
-            data.setFatAchievement(formatRatio(ratio) + " (" + formatDecimal(actualNutrients.fat) + "/" + formatDecimal(targetNutrients.fat) + ")");
+        if (targetNutrients.get(NutrientType.FAT) > 0) {
+            double ratio = actualNutrients.get(NutrientType.FAT) / targetNutrients.get(NutrientType.FAT);
+            data.setFatAchievement(formatRatio(ratio) + " (" + formatDecimal(actualNutrients.get(NutrientType.FAT)) + "/" + formatDecimal(targetNutrients.get(NutrientType.FAT)) + ")");
         }
         
-        if (targetNutrients.calcium > 0) {
-            double ratio = actualNutrients.calcium / targetNutrients.calcium;
-            data.setCalciumAchievement(formatRatio(ratio) + " (" + (int)actualNutrients.calcium + "/" + (int)targetNutrients.calcium + ")");
+        if (targetNutrients.get(NutrientType.CALCIUM) > 0) {
+            double ratio = actualNutrients.get(NutrientType.CALCIUM) / targetNutrients.get(NutrientType.CALCIUM);
+            data.setCalciumAchievement(formatRatio(ratio) + " (" + actualNutrients.get(NutrientType.CALCIUM).intValue() + "/" + targetNutrients.get(NutrientType.CALCIUM).intValue() + ")");
         }
         
-        if (targetNutrients.potassium > 0) {
-            double ratio = actualNutrients.potassium / targetNutrients.potassium;
-            data.setPotassiumAchievement(formatRatio(ratio) + " (" + (int)actualNutrients.potassium + "/" + (int)targetNutrients.potassium + ")");
+        if (targetNutrients.get(NutrientType.POTASSIUM) > 0) {
+            double ratio = actualNutrients.get(NutrientType.POTASSIUM) / targetNutrients.get(NutrientType.POTASSIUM);
+            data.setPotassiumAchievement(formatRatio(ratio) + " (" + actualNutrients.get(NutrientType.POTASSIUM).intValue() + "/" + targetNutrients.get(NutrientType.POTASSIUM).intValue() + ")");
         }
         
-        if (targetNutrients.sodium > 0) {
-            double ratio = actualNutrients.sodium / targetNutrients.sodium;
-            data.setSodiumAchievement(formatRatio(ratio) + " (" + (int)actualNutrients.sodium + "/" + (int)targetNutrients.sodium + ")");
+        if (targetNutrients.get(NutrientType.SODIUM) > 0) {
+            double ratio = actualNutrients.get(NutrientType.SODIUM) / targetNutrients.get(NutrientType.SODIUM);
+            data.setSodiumAchievement(formatRatio(ratio) + " (" + actualNutrients.get(NutrientType.SODIUM).intValue() + "/" + targetNutrients.get(NutrientType.SODIUM).intValue() + ")");
         }
         
-        if (targetNutrients.magnesium > 0) {
-            double ratio = actualNutrients.magnesium / targetNutrients.magnesium;
-            data.setMagnesiumAchievement(formatRatio(ratio) + " (" + (int)actualNutrients.magnesium + "/" + (int)targetNutrients.magnesium + ")");
+        if (targetNutrients.get(NutrientType.MAGNESIUM) > 0) {
+            double ratio = actualNutrients.get(NutrientType.MAGNESIUM) / targetNutrients.get(NutrientType.MAGNESIUM);
+            data.setMagnesiumAchievement(formatRatio(ratio) + " (" + actualNutrients.get(NutrientType.MAGNESIUM).intValue() + "/" + targetNutrients.get(NutrientType.MAGNESIUM).intValue() + ")");
         }
     }
     
@@ -244,12 +245,12 @@ public class MealSolutionExcelExporter {
      * @param solution 膳食方案
      */
     private static void setMacroNutrientPercentages(MealSolutionExcelData data, MealSolution solution) {
-        Nutrition nutrients = solution.calculateTotalNutrients();
+        Map<NutrientType, Double> nutrients = solution.calculateTotalNutrients();
         
         // 计算各营养素提供的热量
-        double carbsCalories = nutrients.carbohydrates * 4; // 碳水：4kcal/g
-        double proteinCalories = nutrients.protein * 4;     // 蛋白质：4kcal/g
-        double fatCalories = nutrients.fat * 9;             // 脂肪：9kcal/g
+        double carbsCalories = nutrients.get(NutrientType.CARBOHYDRATES) * 4; // 碳水：4kcal/g
+        double proteinCalories = nutrients.get(NutrientType.PROTEIN) * 4;     // 蛋白质：4kcal/g
+        double fatCalories = nutrients.get(NutrientType.FAT) * 9;             // 脂肪：9kcal/g
         double totalCalories = carbsCalories + proteinCalories + fatCalories;
         
         if (totalCalories > 0) {
@@ -309,75 +310,41 @@ public class MealSolutionExcelExporter {
     }
     
     /**
-     * 计算并设置营养素偏离度
+     * 计算并设置偏离度分数
      * @param data Excel数据模型
      * @param solution 膳食方案
      * @param targetNutrients 目标营养素
      */
-    private static void calculateAndSetDeviationScore(MealSolutionExcelData data, MealSolution solution, Nutrition targetNutrients) {
-        Nutrition actualNutrients = solution.calculateTotalNutrients();
+    private static void calculateAndSetDeviationScore(MealSolutionExcelData data, MealSolution solution, Map<NutrientType, Double> targetNutrients,UserProfile userProfile) {
+        Map<NutrientType, double[]> nutrientRates = NutrientType.getNutrientRates(userProfile);
+
+        Map<NutrientType, Double> actualNutrients = solution.calculateTotalNutrients();
         double totalDeviation = 0.0;
         int count = 0;
         
         // 计算各营养素的偏离度
-        if (targetNutrients.calories > 0) {
-            double ratio = actualNutrients.calories / targetNutrients.calories;
-            double deviation = calculateDeviationFromRange(ratio, 0.9, 1.1); // 使用默认范围
-            totalDeviation += deviation;
-            count++;
-        }
-        
-        if (targetNutrients.carbohydrates > 0) {
-            double ratio = actualNutrients.carbohydrates / targetNutrients.carbohydrates;
-            double deviation = calculateDeviationFromRange(ratio, 0.85, 1.15);
-            totalDeviation += deviation;
-            count++;
-        }
-        
-        if (targetNutrients.protein > 0) {
-            double ratio = actualNutrients.protein / targetNutrients.protein;
-            double deviation = calculateDeviationFromRange(ratio, 0.9, 1.2);
-            totalDeviation += deviation;
-            count++;
-        }
-        
-        if (targetNutrients.fat > 0) {
-            double ratio = actualNutrients.fat / targetNutrients.fat;
-            double deviation = calculateDeviationFromRange(ratio, 0.7, 1.1);
-            totalDeviation += deviation;
-            count++;
-        }
-        
-        if (targetNutrients.calcium > 0) {
-            double ratio = actualNutrients.calcium / targetNutrients.calcium;
-            double deviation = calculateDeviationFromRange(ratio, 0.8, 1.5);
-            totalDeviation += deviation;
-            count++;
-        }
-        
-        if (targetNutrients.potassium > 0) {
-            double ratio = actualNutrients.potassium / targetNutrients.potassium;
-            double deviation = calculateDeviationFromRange(ratio, 0.8, 1.5);
-            totalDeviation += deviation;
-            count++;
-        }
-        
-        if (targetNutrients.sodium > 0) {
-            double ratio = actualNutrients.sodium / targetNutrients.sodium;
-            double deviation = calculateDeviationFromRange(ratio, 0.5, 1.0);
-            // 对于钠这类限制性营养素，过量的偏离应该受到更严厉的惩罚
-            if (ratio > 1.0) {
-                deviation *= 1.5;
+        for (Map.Entry<NutrientType, Double> entry : targetNutrients.entrySet()) {
+            NutrientType nutrient = entry.getKey();
+            double targetValue = entry.getValue();
+            
+            if (targetValue > 0) {
+                double actualValue = actualNutrients.get(nutrient);
+                double ratio = actualValue / targetValue;
+                
+                double[] rates = nutrientRates.get(nutrient);
+                double minRate = rates[0];
+                double maxRate = rates[1];
+                
+                double deviation = calculateDeviationFromRange(ratio, minRate, maxRate);
+                
+                // 对于钠这类限制性营养素，过量的偏离应该受到更严厉的惩罚
+                if (nutrient == NutrientType.SODIUM && ratio > 1.0) {
+                    deviation *= 1.5;
+                }
+                
+                totalDeviation += deviation;
+                count++;
             }
-            totalDeviation += deviation;
-            count++;
-        }
-        
-        if (targetNutrients.magnesium > 0) {
-            double ratio = actualNutrients.magnesium / targetNutrients.magnesium;
-            double deviation = calculateDeviationFromRange(ratio, 0.8, 1.5);
-            totalDeviation += deviation;
-            count++;
         }
         
         // 计算平均偏离度

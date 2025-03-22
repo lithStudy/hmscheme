@@ -4,7 +4,7 @@ import com.mealplanner.genetic.model.FoodGene;
 import com.mealplanner.genetic.model.MealSolution;
 import com.mealplanner.genetic.model.ObjectiveValue;
 import com.mealplanner.model.FoodCategory;
-import com.mealplanner.model.Nutrition;
+import com.mealplanner.model.NutrientType;
 
 import java.util.*;
 
@@ -68,7 +68,7 @@ public class FoodDiversityObjective extends AbstractObjectiveEvaluator {
      * @return 目标值
      */
     @Override
-    public ObjectiveValue evaluate(MealSolution solution, Nutrition targetNutrients) {
+    public ObjectiveValue evaluate(MealSolution solution, Map<NutrientType, Double> targetNutrients) {
         return evaluate(solution);
     }
     

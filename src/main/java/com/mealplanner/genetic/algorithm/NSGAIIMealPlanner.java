@@ -19,7 +19,6 @@ import com.mealplanner.genetic.util.NSGAIIConfiguration;
 import com.mealplanner.genetic.util.NSGAIILogger;
 import com.mealplanner.model.Food;
 import com.mealplanner.model.NutrientType;
-import com.mealplanner.model.Nutrition;
 import com.mealplanner.model.UserProfile;
 
 /**
@@ -48,7 +47,7 @@ public class NSGAIIMealPlanner {
     private Map<NutrientType, double[]> nutrientRates = new HashMap<>();
     
     // 目标营养素，用于计算达成率
-    private Nutrition targetNutrients;
+    private Map<NutrientType, Double> targetNutrients;
     
     /**
      * 构造函数
@@ -73,13 +72,13 @@ public class NSGAIIMealPlanner {
     
     /**
      * 生成一餐的膳食方案
-     * @param targetNutrients 目标营养素需求
+     * @param targetNutrientItems 目标营养素需求
      * @param requireStaple 是否要求包含主食
      * @return 最优的膳食方案列表（帕累托前沿）
      */
-    public List<MealSolution> generateMeal(Nutrition targetNutrients, boolean requireStaple) {
+    public List<MealSolution> generateMeal(Map<NutrientType, Double> targetNutrientItems, boolean requireStaple) {
         // 保存目标营养素，用于计算达成率
-        this.targetNutrients = targetNutrients;
+        this.targetNutrients = targetNutrientItems;
         
         // // 设置变异器的营养素达成率范围，确保一致性
         // mutation.setNutrientAchievementRateRange(minNutrientAchievementRate, maxNutrientAchievementRate);
@@ -88,7 +87,7 @@ public class NSGAIIMealPlanner {
         mutation.setNutrientAchievementRates(nutrientRates);
         
         // 将目标营养素传递给变异器，以便精确计算营养素达成率
-        mutation.setTargetNutrients(targetNutrients);
+        mutation.setTargetNutrients(this.targetNutrients);
         
         // 优先使用营养素敏感度分析变异策略
         mutation.setMutationType(MutationType.NUTRIENT_SENSITIVITY);
@@ -97,10 +96,10 @@ public class NSGAIIMealPlanner {
         logger.startAlgorithm(config);
         
         // 初始化种群
-        Population population = initializePopulation(targetNutrients, requireStaple);
+        Population population = initializePopulation(this.targetNutrients, requireStaple);
         
         // 评估初始种群的目标值
-        evaluatePopulation(population, targetNutrients);
+        evaluatePopulation(population, this.targetNutrients);
         
         // 对初始种群进行非支配排序和拥挤度计算
         NonDominatedSorting.sort(population);
@@ -113,7 +112,7 @@ public class NSGAIIMealPlanner {
             logger.startGeneration(generation);
             
             // 1. 创建子代种群
-            Population offspringPopulation = createOffspringPopulation(population, targetNutrients, requireStaple);
+            Population offspringPopulation = createOffspringPopulation(population, this.targetNutrients, requireStaple);
             
             // 2. 合并父代和子代
             Population combinedPopulation = Population.merge(population, offspringPopulation);
@@ -150,7 +149,7 @@ public class NSGAIIMealPlanner {
     /**
      * 初始化种群
      */
-    private Population initializePopulation(Nutrition targetNutrients, boolean requireStaple) {
+    private Population initializePopulation(Map<NutrientType, Double> targetNutrients, boolean requireStaple) {
         List<MealSolution> solutions = new ArrayList<>();
         
         for (int i = 0; i < config.getPopulationSize(); i++) {
@@ -169,7 +168,7 @@ public class NSGAIIMealPlanner {
     /**
      * 评估种群中所有解决方案的目标值
      */
-    private void evaluatePopulation(Population population, Nutrition targetNutrients) {
+    private void evaluatePopulation(Population population, Map<NutrientType, Double> targetNutrients) {
         for (MealSolution solution : population.getSolutions()) {
             List<ObjectiveValue> objectiveValues = objectiveEvaluator.evaluate(solution, targetNutrients);
             solution.setObjectiveValues(objectiveValues);
@@ -179,7 +178,7 @@ public class NSGAIIMealPlanner {
     /**
      * 创建子代种群
      */
-    private Population createOffspringPopulation(Population parentPopulation, Nutrition targetNutrients, boolean requireStaple) {
+    private Population createOffspringPopulation(Population parentPopulation, Map<NutrientType, Double> targetNutrients, boolean requireStaple) {
         List<MealSolution> offspring = new ArrayList<>();
         
         while (offspring.size() < config.getPopulationSize()) {
@@ -192,7 +191,7 @@ public class NSGAIIMealPlanner {
             // 应用变异
             for (MealSolution child : children) {
                 // 使用目标热量进行变异
-                mutation.apply(child, requireStaple, targetNutrients.calories);
+                mutation.apply(child, requireStaple, targetNutrients.get(NutrientType.CALORIES));
                 
                 // 确保解的有效性
                 while (!child.isValid(requireStaple)) {
@@ -210,6 +209,7 @@ public class NSGAIIMealPlanner {
                 
                 offspring.add(child);
                 
+                // 如果已经达到所需的子代数量，则退出
                 if (offspring.size() >= config.getPopulationSize()) {
                     break;
                 }
@@ -348,72 +348,22 @@ public class NSGAIIMealPlanner {
      * @param targetNutrients 目标营养素
      * @return 是否满足要求
      */
-    private boolean checkAllNutrientsAchievement(MealSolution solution, Nutrition targetNutrients) {
-        Nutrition actualNutrients = solution.calculateTotalNutrients();
-        
-        // 检查主要营养素（热量、碳水、蛋白质、脂肪）
-        if (targetNutrients.calories > 0) {
-            double caloriesRatio = actualNutrients.calories / targetNutrients.calories;
-            double[] caloriesRange = nutrientRates.get(NutrientType.CALORIES);
-            if (caloriesRatio < caloriesRange[0] || caloriesRatio > caloriesRange[1]) {
-                return false;
-            }
-        }
-        
-        if (targetNutrients.carbohydrates > 0) {
-            double carbsRatio = actualNutrients.carbohydrates / targetNutrients.carbohydrates;
-            double[] carbsRange = nutrientRates.get(NutrientType.CARBOHYDRATES);
-            if (carbsRatio < carbsRange[0] || carbsRatio > carbsRange[1]) {
-                return false;
-            }
-        }
-        
-        if (targetNutrients.protein > 0) {
-            double proteinRatio = actualNutrients.protein / targetNutrients.protein;
-            double[] proteinRange = nutrientRates.get(NutrientType.PROTEIN);
-            if (proteinRatio < proteinRange[0] || proteinRatio > proteinRange[1]) {
-                return false;
-            }
-        }
-        
-        if (targetNutrients.fat > 0) {
-            double fatRatio = actualNutrients.fat / targetNutrients.fat;
-            double[] fatRange = nutrientRates.get(NutrientType.FAT);
-            if (fatRatio < fatRange[0] || fatRatio > fatRange[1]) {
-                return false;
-            }
-        }
-        
-        // 微量元素可以选择性检查，这里也一并检查
-        if (targetNutrients.calcium > 0) {
-            double calciumRatio = actualNutrients.calcium / targetNutrients.calcium;
-            double[] calciumRange = nutrientRates.get(NutrientType.CALCIUM);
-            if (calciumRatio < calciumRange[0] || calciumRatio > calciumRange[1]) {
-                return false;
-            }
-        }
-        
-        if (targetNutrients.potassium > 0) {
-            double potassiumRatio = actualNutrients.potassium / targetNutrients.potassium;
-            double[] potassiumRange = nutrientRates.get(NutrientType.POTASSIUM);
-            if (potassiumRatio < potassiumRange[0] || potassiumRatio > potassiumRange[1]) {
-                return false;
-            }
-        }
-        
-        if (targetNutrients.sodium > 0) {
-            double sodiumRatio = actualNutrients.sodium / targetNutrients.sodium;
-            double[] sodiumRange = nutrientRates.get(NutrientType.SODIUM);
-            if (sodiumRatio < sodiumRange[0] || sodiumRatio > sodiumRange[1]) {
-                return false;
-            }
-        }
-        
-        if (targetNutrients.magnesium > 0) {
-            double magnesiumRatio = actualNutrients.magnesium / targetNutrients.magnesium;
-            double[] magnesiumRange = nutrientRates.get(NutrientType.MAGNESIUM);
-            if (magnesiumRatio < magnesiumRange[0] || magnesiumRatio > magnesiumRange[1]) {
-                return false;
+    private boolean checkAllNutrientsAchievement(MealSolution solution, Map<NutrientType, Double> targetNutrients) {
+        Map<NutrientType, Double> actualNutrients = solution.calculateTotalNutrients();
+        // 遍历所有营养素类型进行检查
+        for (NutrientType nutrientType : NutrientType.values()) {
+            Double targetValue = targetNutrients.get(nutrientType);
+            Double actualValue = actualNutrients.get(nutrientType);
+            
+            // 如果目标值存在且大于0,则进行检查
+            if (targetValue != null && targetValue > 0) {
+                double ratio = actualValue / targetValue;
+                double[] range = nutrientRates.get(nutrientType);
+                
+                // 如果比率不在允许范围内,返回false
+                if (ratio < range[0] || ratio > range[1]) {
+                    return false;
+                }
             }
         }
         
@@ -463,32 +413,32 @@ public class NSGAIIMealPlanner {
     /**
      * 计算营养素偏离度得分，热量权重更高
      */
-    private double calculateNutrientDeviationScore(MealSolution solution, Nutrition targetNutrients) {
-        Nutrition actualNutrients = solution.calculateTotalNutrients();
+    private double calculateNutrientDeviationScore(MealSolution solution, Map<NutrientType, Double> targetNutrients) {
+        Map<NutrientType, Double> actualNutrients = solution.calculateTotalNutrients();
         double totalDeviation = 0.0;
         double totalWeight = 0.0;
         
         // 热量偏差，权重为3
-        double caloriesDeviation = Math.abs(actualNutrients.getCalories() - targetNutrients.getCalories()) / targetNutrients.getCalories();
+        double caloriesDeviation = Math.abs(actualNutrients.get(NutrientType.CALORIES) - targetNutrients.get(NutrientType.CALORIES)) / targetNutrients.get(NutrientType.CALORIES);
         totalDeviation += caloriesDeviation * 3.0;
         totalWeight += 3.0;
         
         // 其他营养素偏差，权重为1
-        double proteinDeviation = Math.abs(actualNutrients.getProtein() - targetNutrients.getProtein()) / targetNutrients.getProtein();
-        double carbsDeviation = Math.abs(actualNutrients.getCarbohydrates() - targetNutrients.getCarbohydrates()) / targetNutrients.getCarbohydrates();
-        double fatDeviation = Math.abs(actualNutrients.getFat() - targetNutrients.getFat()) / targetNutrients.getFat();
+        double proteinDeviation = Math.abs(actualNutrients.get(NutrientType.PROTEIN) - targetNutrients.get(NutrientType.PROTEIN)) / targetNutrients.get(NutrientType.PROTEIN);
+        double carbsDeviation = Math.abs(actualNutrients.get(NutrientType.CARBOHYDRATES) - targetNutrients.get(NutrientType.CARBOHYDRATES)) / targetNutrients.get(NutrientType.CARBOHYDRATES);
+        double fatDeviation = Math.abs(actualNutrients.get(NutrientType.FAT) - targetNutrients.get(NutrientType.FAT)) / targetNutrients.get(NutrientType.FAT);
         
         totalDeviation += proteinDeviation + carbsDeviation + fatDeviation;
         totalWeight += 3.0; // 三个主要营养素各占1权重
         
         // 微量营养素偏差，权重为0.5
         Map<String, Double> micronutrients = new LinkedHashMap<>();
-        micronutrients.put("calcium", (double) actualNutrients.getCalcium() / targetNutrients.getCalcium());
-        micronutrients.put("iron", (double) actualNutrients.getIron() / targetNutrients.getIron());
-        micronutrients.put("magnesium", (double) actualNutrients.getMagnesium() / targetNutrients.getMagnesium());
-        micronutrients.put("phosphorus", (double) actualNutrients.getPhosphorus() / targetNutrients.getPhosphorus());
-        micronutrients.put("potassium", (double) actualNutrients.getPotassium() / targetNutrients.getPotassium());
-        micronutrients.put("sodium", (double) actualNutrients.getSodium() / targetNutrients.getSodium());
+        micronutrients.put("calcium", (double) actualNutrients.get(NutrientType.CALCIUM) / targetNutrients.get(NutrientType.CALCIUM));
+        micronutrients.put("iron", (double) actualNutrients.get(NutrientType.IRON) / targetNutrients.get(NutrientType.IRON));
+        micronutrients.put("magnesium", (double) actualNutrients.get(NutrientType.MAGNESIUM) / targetNutrients.get(NutrientType.MAGNESIUM));
+        micronutrients.put("phosphorus", (double) actualNutrients.get(NutrientType.PHOSPHORUS) / targetNutrients.get(NutrientType.PHOSPHORUS));
+        micronutrients.put("potassium", (double) actualNutrients.get(NutrientType.POTASSIUM) / targetNutrients.get(NutrientType.POTASSIUM));
+        micronutrients.put("sodium", (double) actualNutrients.get(NutrientType.SODIUM) / targetNutrients.get(NutrientType.SODIUM));
         
         for (double ratio : micronutrients.values()) {
             if (ratio > 0) {

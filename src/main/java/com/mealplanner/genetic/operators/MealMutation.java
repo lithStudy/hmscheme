@@ -48,7 +48,7 @@ public class MealMutation {
     private Map<String, Double> nutrientWeights = new HashMap<>();
     
     // 当前目标营养素（可选）
-    private Nutrition targetNutrients;
+    private Map<NutrientType, Double> targetNutrients;
     
     /**
      * 构造函数
@@ -390,7 +390,7 @@ public class MealMutation {
         }
         
         // 计算当前膳食的总热量
-        double currentCalories = solution.calculateTotalNutrients().getCalories();
+        double currentCalories = solution.calculateTotalNutrients().get(NutrientType.CALORIES);
         
         // 计算热量差额（正值表示需要增加热量，负值表示需要减少热量）
         double caloriesDifference = targetCalories - currentCalories;
@@ -410,7 +410,7 @@ public class MealMutation {
             // 需要增加热量，选择高热量密度的食物
             candidateGenes = genes.stream()
                     .filter(gene -> {
-                        double caloriesPer100g = gene.getFood().getNutrition().getCalories();
+                        double caloriesPer100g = gene.getFood().getNutritionItems().get(NutrientType.CALORIES);
                         return caloriesPer100g > 100; // 选择热量密度较高的食物
                     })
                     .collect(java.util.stream.Collectors.toList());
@@ -418,7 +418,7 @@ public class MealMutation {
             // 需要减少热量，选择高热量密度的食物减少摄入量
             candidateGenes = genes.stream()
                     .filter(gene -> {
-                        double caloriesPer100g = gene.getFood().getNutrition().getCalories();
+                        double caloriesPer100g = gene.getFood().getNutritionItems().get(NutrientType.CALORIES);
                         return caloriesPer100g > 100; // 选择热量密度较高的食物
                     })
                     .collect(java.util.stream.Collectors.toList());
@@ -438,7 +438,7 @@ public class MealMutation {
         double maxIntake = food.getRecommendedIntakeRange().getMaxIntake();
         
         // 计算当前食物的热量密度（每克卡路里）
-        double caloriesPerGram = food.getNutrition().getCalories() / 100.0;
+        double caloriesPerGram = food.getNutritionItems().get(NutrientType.CALORIES) / 100.0;
         
         // 计算需要调整的克数
         double gramsToAdjust = caloriesDifference / caloriesPerGram;
@@ -543,71 +543,26 @@ public class MealMutation {
      */
     private Map<NutrientType, Double> calculateNutrientAchievementRatios(MealSolution solution) {
         // 计算实际营养素
-        Nutrition actualNutrients = solution.calculateTotalNutrients();
-        
-        // 使用已设置的目标营养素，或者估计值
-        Nutrition targetsToUse = targetNutrients != null ? 
-                                                  targetNutrients : 
-                                                  estimateTargetNutrients(actualNutrients);
+        Map<NutrientType, Double> actualNutrients = solution.calculateTotalNutrients();
+        // 使用已设置的目标营养素
+        Map<NutrientType, Double> targetsToUse = targetNutrients;
         
         Map<NutrientType, Double> ratios = new HashMap<>();
         
-        // 计算主要营养素的达成率
-        if (targetsToUse.getCalories() > 0) {
-            ratios.put(NutrientType.CALORIES, actualNutrients.getCalories() / targetsToUse.getCalories());
-        }
-        
-        if (targetsToUse.getCarbohydrates() > 0) {
-            ratios.put(NutrientType.CARBOHYDRATES, actualNutrients.getCarbohydrates() / targetsToUse.getCarbohydrates());
-        }
-        
-        if (targetsToUse.getProtein() > 0) {
-            ratios.put(NutrientType.PROTEIN, actualNutrients.getProtein() / targetsToUse.getProtein());
-        }
-        
-        if (targetsToUse.getFat() > 0) {
-            ratios.put(NutrientType.FAT, actualNutrients.getFat() / targetsToUse.getFat());
-        }
-        
-        // 计算微量元素的达成率
-        if (targetsToUse.getCalcium() > 0) {
-            ratios.put(NutrientType.CALCIUM, actualNutrients.getCalcium() / targetsToUse.getCalcium());
-        }
-        
-        if (targetsToUse.getPotassium() > 0) {
-            ratios.put(NutrientType.POTASSIUM, actualNutrients.getPotassium() / targetsToUse.getPotassium());
-        }
-        
-        if (targetsToUse.getSodium() > 0) {
-            ratios.put(NutrientType.SODIUM, actualNutrients.getSodium() / targetsToUse.getSodium());
-        }
-        
-        if (targetsToUse.getMagnesium() > 0) {
-            ratios.put(NutrientType.MAGNESIUM, actualNutrients.getMagnesium() / targetsToUse.getMagnesium());
+        // 遍历所有营养素类型计算达成率
+        for (NutrientType nutrientType : NutrientType.values()) {
+            Double targetValue = targetsToUse.get(nutrientType);
+            Double actualValue = actualNutrients.get(nutrientType);
+            
+            if (targetValue != null && targetValue > 0 && actualValue != null) {
+                ratios.put(nutrientType, actualValue / targetValue);
+            }
         }
         
         return ratios;
     }
     
-    /**
-     * 估计目标营养素（当无法直接获取时）
-     * @param actualNutrients 当前营养素
-     * @return 估计的目标营养素
-     */
-        private Nutrition estimateTargetNutrients(Nutrition actualNutrients) {
-        // 这是一个简化的估计方法，实际情况应基于用户特征进行更复杂的计算
-        // 假设当前营养素是目标的一个比例
-        return new Nutrition(
-            actualNutrients.getCalories() * 1.25,       // 假设目标热量是当前的1.25倍
-            actualNutrients.getCarbohydrates() * 1.2,   // 碳水
-            actualNutrients.getProtein() * 1.3,         // 蛋白质
-            actualNutrients.getFat() * 1.15,            // 脂肪
-            actualNutrients.getCalcium() * 1.4,         // 钙
-            actualNutrients.getPotassium() * 1.5,       // 钾
-            actualNutrients.getSodium() * 0.9,          // 钠（可能需要减少）
-            actualNutrients.getMagnesium() * 1.4        // 镁
-        );
-    }
+    
     
     /**
      * 确定营养素是否需要调整
@@ -649,7 +604,7 @@ public class MealMutation {
      */
     private Map<FoodGene, Map<NutrientType, Double>> calculateFoodNutrientContributions(MealSolution solution) {
         List<FoodGene> genes = solution.getFoodGenes();
-        Nutrition totalNutrients = solution.calculateTotalNutrients();
+        Map<NutrientType, Double> totalNutrients = solution.calculateTotalNutrients();
         Map<FoodGene, Map<NutrientType, Double>> contributions = new HashMap<>();
         
         for (FoodGene gene : genes) {
@@ -659,43 +614,17 @@ public class MealMutation {
             
             // 计算该食材对各营养素的贡献比例
             // 热量贡献
-            double caloriesContrib = (food.getNutrition().getCalories() * intake / 100) / totalNutrients.getCalories();
-            nutrientContributions.put(NutrientType.CALORIES, caloriesContrib);
-            
-            // 碳水贡献
-            double carbsContrib = (food.getNutrition().getCarbohydrates() * intake / 100) / totalNutrients.getCarbohydrates();
-            nutrientContributions.put(NutrientType.CARBOHYDRATES, carbsContrib);
-            
-            // 蛋白质贡献
-            double proteinContrib = (food.getNutrition().getProtein() * intake / 100) / totalNutrients.getProtein();
-            nutrientContributions.put(NutrientType.PROTEIN, proteinContrib);
-            
-            // 脂肪贡献
-            double fatContrib = (food.getNutrition().getFat() * intake / 100) / totalNutrients.getFat();
-            nutrientContributions.put(NutrientType.FAT, fatContrib);
-            
-            // 钙贡献
-            if (totalNutrients.getCalcium() > 0) {
-                double calciumContrib = (food.getNutrition().getCalcium() * intake / 100) / totalNutrients.getCalcium();
-                nutrientContributions.put(NutrientType.CALCIUM, calciumContrib);
-            }
-            
-            // 钾贡献
-            if (totalNutrients.getPotassium() > 0) {
-                double potassiumContrib = (food.getNutrition().getPotassium() * intake / 100) / totalNutrients.getPotassium();
-                nutrientContributions.put(NutrientType.POTASSIUM, potassiumContrib);
-            }
-            
-            // 钠贡献
-            if (totalNutrients.getSodium() > 0) {
-                double sodiumContrib = (food.getNutrition().getSodium() * intake / 100) / totalNutrients.getSodium();
-                nutrientContributions.put(NutrientType.SODIUM, sodiumContrib);
-            }
-            
-            // 镁贡献
-            if (totalNutrients.getMagnesium() > 0) {
-                double magnesiumContrib = (food.getNutrition().getMagnesium() * intake / 100) / totalNutrients.getMagnesium();
-                nutrientContributions.put(NutrientType.MAGNESIUM, magnesiumContrib);
+            // 循环处理所有营养素类型
+            for (NutrientType nutrientType : NutrientType.values()) {
+                // 获取该营养素的总量
+                double totalAmount = totalNutrients.get(nutrientType);
+                
+                // 如果总量大于0,计算该食材对该营养素的贡献
+                if (totalAmount > 0) {
+                    double nutrientAmount = food.getNutritionItems().get(nutrientType);
+                    double contribution = (nutrientAmount * intake / 100) / totalAmount;
+                    nutrientContributions.put(nutrientType, contribution);
+                }
             }
             
             contributions.put(gene, nutrientContributions);
@@ -976,7 +905,7 @@ public class MealMutation {
      * 设置目标营养素，用于更精确地计算达成率
      * @param targetNutrients 目标营养素
      */
-    public void setTargetNutrients(Nutrition targetNutrients) {
+    public void setTargetNutrients(Map<NutrientType, Double> targetNutrients) {
         this.targetNutrients = targetNutrients;
     }
     
@@ -984,7 +913,7 @@ public class MealMutation {
      * 获取当前设置的目标营养素
      * @return 目标营养素，如果未设置则返回null
      */
-    public Nutrition getTargetNutrients() {
+    public Map<NutrientType, Double> getTargetNutrients() {
         return this.targetNutrients;
     }
     
