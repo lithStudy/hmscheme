@@ -1,6 +1,5 @@
 package com.mealplanner.model;
 
-import java.util.List;
 import java.util.Map;
 
 import lombok.Builder;

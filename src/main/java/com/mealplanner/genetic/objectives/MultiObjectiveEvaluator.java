@@ -4,7 +4,6 @@ import com.mealplanner.model.UserProfile;
 import com.mealplanner.genetic.model.MealSolution;
 import com.mealplanner.genetic.model.ObjectiveValue;
 import com.mealplanner.model.NutrientType;
-import com.mealplanner.model.Nutrition;
 import java.util.*;
 
 /**

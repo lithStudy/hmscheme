@@ -93,28 +93,94 @@ public class MealSolution {
             candidateFoods.removeIf(food -> FoodCategory.STAPLE.equals(food.getCategory()));
         }
         
+        // 根据类别对食物进行分组
+        Map<FoodCategory, List<Food>> foodsByCategory = candidateFoods.stream()
+                .collect(Collectors.groupingBy(Food::getCategory));
+        
         // 随机选择其余食物
         for (int i = 0; i < foodCount && !candidateFoods.isEmpty(); i++) {
-            // 随机选择一个食物
-            int index = random.nextInt(candidateFoods.size());
-            Food food = candidateFoods.get(index);
+            // 基于概率选择食物类别
+            FoodCategory selectedCategory = selectCategoryByProbability(foodsByCategory.keySet(), random);
+            
+            // 如果没有选中任何类别或者该类别没有剩余食物，随机选择一个非空类别
+            if (selectedCategory == null || foodsByCategory.get(selectedCategory) == null || foodsByCategory.get(selectedCategory).isEmpty()) {
+                // 筛选出有食物的类别
+                List<FoodCategory> availableCategories = foodsByCategory.keySet().stream()
+                        .filter(category -> foodsByCategory.get(category) != null && !foodsByCategory.get(category).isEmpty())
+                        .collect(Collectors.toList());
+                
+                if (availableCategories.isEmpty()) {
+                    break; // 没有剩余可选食物
+                }
+                
+                // 随机选择一个有食物的类别
+                selectedCategory = availableCategories.get(random.nextInt(availableCategories.size()));
+            }
+            
+            // 从选定类别中随机选择一个食物
+            List<Food> foodsInCategory = foodsByCategory.get(selectedCategory);
+            Food selectedFood = foodsInCategory.get(random.nextInt(foodsInCategory.size()));
             
             // 为食物随机生成一个在推荐范围内的摄入量
-            double minIntake = food.getRecommendedIntakeRange().getMinIntake();
-            double maxIntake = food.getRecommendedIntakeRange().getMaxIntake();
+            double minIntake = selectedFood.getRecommendedIntakeRange().getMinIntake();
+            double maxIntake = selectedFood.getRecommendedIntakeRange().getMaxIntake();
             double intake = minIntake + random.nextDouble() * (maxIntake - minIntake);
             
             // 将摄入量四舍五入为整数
             intake = Math.round(intake);
             
             // 添加食物基因
-            genes.add(new FoodGene(food, intake));
+            genes.add(new FoodGene(selectedFood, intake));
             
             // 从候选食物列表中移除已选食物
-            candidateFoods.remove(index);
+            foodsInCategory.remove(selectedFood);
+            candidateFoods.remove(selectedFood);
+            
+            // 如果该类别的食物已经用完，从分组中移除该类别
+            if (foodsInCategory.isEmpty()) {
+                foodsByCategory.remove(selectedCategory);
+            }
         }
         
         return new MealSolution(genes);
+    }
+    
+    /**
+     * 根据类别的选中概率选择食物类别
+     * @param categories 可选类别集合
+     * @param random 随机数生成器
+     * @return 选中的类别
+     */
+    private static FoodCategory selectCategoryByProbability(Set<FoodCategory> categories, Random random) {
+        if (categories == null || categories.isEmpty()) {
+            return null;
+        }
+        
+        // 计算所有可用类别的总概率
+        double totalProbability = categories.stream()
+                .mapToDouble(FoodCategory::getSelectionProbability)
+                .sum();
+        
+        // 如果总概率为0，则所有类别等概率选择
+        if (totalProbability <= 0) {
+            List<FoodCategory> categoryList = new ArrayList<>(categories);
+            return categoryList.get(random.nextInt(categoryList.size()));
+        }
+        
+        // 生成0到总概率之间的随机数
+        double randomValue = random.nextDouble() * totalProbability;
+        
+        // 按概率选择类别
+        double cumulativeProbability = 0.0;
+        for (FoodCategory category : categories) {
+            cumulativeProbability += category.getSelectionProbability();
+            if (randomValue <= cumulativeProbability) {
+                return category;
+            }
+        }
+        
+        // 如果由于浮点数误差没有选中任何类别，返回第一个
+        return categories.iterator().next();
     }
     
     /**

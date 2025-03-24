@@ -8,8 +8,6 @@ import com.mealplanner.model.Portion;
 import com.mealplanner.model.FoodCategory;
 import com.mealplanner.model.NutrientType;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 
@@ -20,29 +18,29 @@ import java.util.HashMap;
 public class NutritionData {
     
     // 基本信息
-    @ExcelProperty("樣品編號")
+    @ExcelProperty("样品编号")
     private String sampleId;
     
-    @ExcelProperty("食品分類")
+    @ExcelProperty("食品分类")
     private String foodCategory;
     
-    @ExcelProperty("樣品名稱")
+    @ExcelProperty("样品名称")
     private String sampleName;
     
-    @ExcelProperty("內容物描述")
+    @ExcelProperty("内容物描述")
     private String contentDescription;
     
     @ExcelProperty("俗名")
     private String commonName;
     
-    @ExcelProperty("廢棄率(%)")
+    @ExcelProperty("废弃率(%)")
     private String wasteRate;
     
     // 主要营养素
-    @ExcelProperty("熱量(kcal)")
+    @ExcelProperty("热量(kcal)")
     private String calories;
     
-    @ExcelProperty("修正熱量(kcal)")
+    @ExcelProperty("修正热量(kcal)")
     private String adjustedCalories;
     
     @ExcelProperty("水分(g)")
@@ -57,13 +55,13 @@ public class NutritionData {
     @ExcelProperty("灰分(g)")
     private String ash;
     
-    @ExcelProperty("總碳水化合物(g)")
+    @ExcelProperty("总碳水化合物(g)")
     private String carbohydrates;
     
-    @ExcelProperty("膳食纖維(g)")
+    @ExcelProperty("膳食纤维(g)")
     private String dietaryFiber;
     
-    @ExcelProperty("糖質總量(g)")
+    @ExcelProperty("糖质总量(g)")
     private String totalSugar;
     
     // 糖类
@@ -76,7 +74,7 @@ public class NutritionData {
     @ExcelProperty("半乳糖(g)")
     private String galactose;
     
-    @ExcelProperty("麥芽糖(g)")
+    @ExcelProperty("麦芽糖(g)")
     private String maltose;
     
     @ExcelProperty("蔗糖(g)")
@@ -86,58 +84,58 @@ public class NutritionData {
     private String lactose;
     
     // 矿物质
-    @ExcelProperty("鈉(mg)")
+    @ExcelProperty("钠(mg)")
     private String sodium;
     
-    @ExcelProperty("鉀(mg)")
+    @ExcelProperty("钾(mg)")
     private String potassium;
     
-    @ExcelProperty("鈣(mg)")
+    @ExcelProperty("钙(mg)")
     private String calcium;
     
-    @ExcelProperty("鎂(mg)")
+    @ExcelProperty("镁(mg)")
     private String magnesium;
     
-    @ExcelProperty("鐵(mg)")
+    @ExcelProperty("铁(mg)")
     private String iron;
     
-    @ExcelProperty("鋅(mg)")
+    @ExcelProperty("锌(mg)")
     private String zinc;
     
     @ExcelProperty("磷(mg)")
     private String phosphorus;
     
-    @ExcelProperty("銅(mg)")
+    @ExcelProperty("铜(mg)")
     private String copper;
     
-    @ExcelProperty("錳(mg)")
+    @ExcelProperty("锰(mg)")
     private String manganese;
     
     // 维生素
-    @ExcelProperty("維生素B1(mg)")
+    @ExcelProperty("维生素B1(mg)")
     private String vitaminB1;
     
-    @ExcelProperty("維生素B2(mg)")
+    @ExcelProperty("维生素B2(mg)")
     private String vitaminB2;
     
-    @ExcelProperty("維生素C(mg)")
+    @ExcelProperty("维生素C(mg)")
     private String vitaminC;
     
     // 胆固醇
-    @ExcelProperty("膽固醇(mg)")
+    @ExcelProperty("胆固醇(mg)")
     private String cholesterol;
 
     // 脂肪酸
-    @ExcelProperty("飽和脂肪(g)")
+    @ExcelProperty("饱和脂肪(g)")
     private String saturatedFat;
     
-    @ExcelProperty("脂肪酸S總量(mg)")
+    @ExcelProperty("脂肪酸S总量(mg)")
     private String totalFattyAcids;
     
-    @ExcelProperty("脂肪酸M總量(mg)")
+    @ExcelProperty("脂肪酸M总量(mg)")
     private String totalFattyAcidsM;
 
-    @ExcelProperty("脂肪酸P總量(mg)")
+    @ExcelProperty("脂肪酸P总量(mg)")
     private String totalFattyAcidsP;
     
     /**
@@ -164,7 +162,8 @@ public class NutritionData {
             double magnesiumValue = parseDouble(magnesium);
             double ironValue = parseDouble(iron);
             double phosphorusValue = parseDouble(phosphorus);
-            
+            double fiberValue = parseDouble(dietaryFiber);
+
             // 创建营养项列表
             Map<NutrientType, Double> nutritionMap = new HashMap<>();
             nutritionMap.put(NutrientType.CALORIES, caloriesValue);
@@ -177,6 +176,7 @@ public class NutritionData {
             nutritionMap.put(NutrientType.MAGNESIUM, magnesiumValue);
             nutritionMap.put(NutrientType.IRON, ironValue);
             nutritionMap.put(NutrientType.PHOSPHORUS, phosphorusValue);
+            nutritionMap.put(NutrientType.FIBER, fiberValue);
             
             // 份量信息 - 假设标准份量为100克
             Portion portion = new Portion(100.0, "克", 100.0);

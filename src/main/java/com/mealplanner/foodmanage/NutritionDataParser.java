@@ -92,7 +92,7 @@ public class NutritionDataParser {
             
             // 解析Excel文件
             System.out.println("解析营养数据文件...");
-            String filePath = "src/main/resources/all.xlsx";
+            String filePath = "src/main/resources/foods.xlsx";
             List<NutritionData> dataList = parser.parseNutritionDataFromFile(filePath);
             System.out.println("成功解析 " + dataList.size() + " 条食物营养数据");
             

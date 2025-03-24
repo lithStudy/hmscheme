@@ -82,7 +82,7 @@ public class GeneticMealPlannerDemo {
         
         NutritionDataParser parser = new NutritionDataParser();
         try {
-            foodDatabase = parser.convertToFoodObjects(parser.parseNutritionDataFromFile("src/main/resources/all.xlsx"));
+            foodDatabase = parser.convertToFoodObjects(parser.parseNutritionDataFromFile("src/main/resources/foods.xlsx"));
         } catch (IOException e) {
             System.err.println("加载食物数据库失败：" + e.getMessage());
             e.printStackTrace();
@@ -195,27 +195,27 @@ public class GeneticMealPlannerDemo {
         // 获取各营养素的达成率范围
         Map<NutrientType, double[]> nutrientRates = NutrientType.getNutrientRates(planner.getUserProfile());
         
-        // 定义需要显示的营养素列表
-        List<NutrientType> nutrientsToDisplay = Arrays.asList(
-            NutrientType.CALORIES,
-            NutrientType.CARBOHYDRATES,
-            NutrientType.PROTEIN,
-            NutrientType.FAT,
-            NutrientType.CALCIUM,
-            NutrientType.POTASSIUM,
-            NutrientType.SODIUM,
-            NutrientType.MAGNESIUM,
-            NutrientType.IRON,
-            NutrientType.PHOSPHORUS,
-            NutrientType.ZINC,
-            NutrientType.VITAMIN_A,
-            NutrientType.VITAMIN_C,
-            NutrientType.VITAMIN_D,
-            NutrientType.VITAMIN_E
-        );
+        // // 定义需要显示的营养素列表
+        // List<NutrientType> nutrientsToDisplay = Arrays.asList(
+        //     NutrientType.CALORIES,
+        //     NutrientType.CARBOHYDRATES,
+        //     NutrientType.PROTEIN,
+        //     NutrientType.FAT,
+        //     NutrientType.CALCIUM,
+        //     NutrientType.POTASSIUM,
+        //     NutrientType.SODIUM,
+        //     NutrientType.MAGNESIUM,
+        //     NutrientType.IRON,
+        //     NutrientType.PHOSPHORUS,
+        //     NutrientType.ZINC,
+        //     NutrientType.VITAMIN_A,
+        //     NutrientType.VITAMIN_C,
+        //     NutrientType.VITAMIN_D,
+        //     NutrientType.VITAMIN_E
+        // );
 
         // 遍历显示每种营养素的信息
-        for (NutrientType nutrientType : nutrientsToDisplay) {
+        for (NutrientType nutrientType : NutrientType.values()) {
             String unit = nutrientType.getUnit();
             String name = nutrientType.getDisplayName();
             

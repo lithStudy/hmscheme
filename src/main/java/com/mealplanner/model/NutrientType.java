@@ -17,18 +17,19 @@ public enum NutrientType {
     CARBOHYDRATES("carbohydrates", "碳水化合物", "g", true, 1.0, new double[]{0.85, 1.15}, 250.0),
     PROTEIN("protein", "蛋白质", "g", true, 1.0, new double[]{0.9, 1.2}, 70.0),
     FAT("fat", "脂肪", "g", true, 0.8, new double[]{0.7, 1.1}, 60.0),
-    FIBER("fiber", "膳食纤维", "g", true, 0.5, new double[]{0.8, 1.5}, 25.0),
+    FIBER("fiber", "膳食纤维", "g", true, 0.7, new double[]{0.6, 1.5}, 30.0),
     CALCIUM("calcium", "钙", "mg", false, 0.7, new double[]{0.8, 1.5}, 1000.0),
     POTASSIUM("potassium", "钾", "mg", false, 0.7, new double[]{0.8, 1.5}, 3500.0),
     SODIUM("sodium", "钠", "mg", true, 0.8, new double[]{0.5, 1.0}, 2000.0),
     MAGNESIUM("magnesium", "镁", "mg", false, 0.7, new double[]{0.8, 1.5}, 350.0),
-    IRON("iron", "铁", "mg", false, 0.7, new double[]{0.8, 1.5}, 10.0),
-    PHOSPHORUS("phosphorus", "磷", "mg", false, 0.7, new double[]{0.8, 1.5}, 700.0),
-    ZINC("zinc", "锌", "mg", false, 0.7, new double[]{0.8, 1.5}, 10.0),
-    VITAMIN_A("vitamin_a", "维生素A", "μg", false, 0.7, new double[]{0.8, 1.5}, 800.0),
-    VITAMIN_C("vitamin_c", "维生素C", "mg", false, 0.7, new double[]{0.8, 1.5}, 80.0),
-    VITAMIN_D("vitamin_d", "维生素D", "μg", false, 0.7, new double[]{0.8, 1.5}, 10.0),
-    VITAMIN_E("vitamin_e", "维生素E", "mg", false, 0.7, new double[]{0.8, 1.5}, 15.0);
+    IRON("iron", "铁", "mg", false, 0.7, new double[]{0.5, 1.5}, 10.0),
+    PHOSPHORUS("phosphorus", "磷", "mg", false, 0.7, new double[]{0.5, 1.5}, 700.0),
+    // ZINC("zinc", "锌", "mg", false, 0.7, new double[]{0.8, 1.5}, 10.0),
+    // VITAMIN_A("vitamin_a", "维生素A", "μg", false, 0.7, new double[]{0.8, 1.5}, 800.0),
+    // VITAMIN_C("vitamin_c", "维生素C", "mg", false, 0.7, new double[]{0.8, 1.5}, 80.0),
+    // VITAMIN_D("vitamin_d", "维生素D", "μg", false, 0.7, new double[]{0.8, 1.5}, 10.0),
+    // VITAMIN_E("vitamin_e", "维生素E", "mg", false, 0.7, new double[]{0.8, 1.5}, 15.0),
+    ;
     
     // 营养素的英文名称
     private final String name;
@@ -137,7 +138,7 @@ public enum NutrientType {
         // 骨质疏松调整
         Map<NutrientType, Double> osteoporosisAdjustments = new HashMap<>();
         osteoporosisAdjustments.put(CALCIUM, 1.5); // 骨质疏松患者钙摄入量增至正常人的150%
-        osteoporosisAdjustments.put(VITAMIN_D, 2.0); // 维生素D增加一倍
+        // osteoporosisAdjustments.put(VITAMIN_D, 2.0); // 维生素D增加一倍
         osteoporosisAdjustments.put(MAGNESIUM, 1.2); // 增加镁摄入
         HEALTH_CONDITION_ADJUSTMENT.put("osteoporosis", osteoporosisAdjustments);
     }
@@ -180,6 +181,7 @@ public enum NutrientType {
             if (this == MAGNESIUM) {
                 baseIntake = 310.0; // 女性镁摄入量推荐值
             }
+
         }
         
         // 根据年龄调整
