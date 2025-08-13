@@ -175,10 +175,11 @@ public class NSGAIILogger {
             
             // 记录营养素总值
             sb.append("营养素总值:\n");
-            sb.append("  热量: ").append(String.format("%.1f", solution.calculateTotalNutrients().calories)).append(" kcal\n");
-            sb.append("  碳水: ").append(String.format("%.1f", solution.calculateTotalNutrients().carbohydrates)).append(" g\n");
-            sb.append("  蛋白质: ").append(String.format("%.1f", solution.calculateTotalNutrients().protein)).append(" g\n");
-            sb.append("  脂肪: ").append(String.format("%.1f", solution.calculateTotalNutrients().fat)).append(" g\n");
+            java.util.Map<com.mealplanner.model.NutrientType, Double> totals = solution.calculateTotalNutrients();
+            sb.append("  热量: ").append(String.format("%.1f", totals.get(com.mealplanner.model.NutrientType.CALORIES))).append(" kcal\n");
+            sb.append("  碳水: ").append(String.format("%.1f", totals.get(com.mealplanner.model.NutrientType.CARBOHYDRATES))).append(" g\n");
+            sb.append("  蛋白质: ").append(String.format("%.1f", totals.get(com.mealplanner.model.NutrientType.PROTEIN))).append(" g\n");
+            sb.append("  脂肪: ").append(String.format("%.1f", totals.get(com.mealplanner.model.NutrientType.FAT))).append(" g\n");
             
             log(sb.toString());
         }

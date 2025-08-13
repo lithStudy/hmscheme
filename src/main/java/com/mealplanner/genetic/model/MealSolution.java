@@ -8,22 +8,25 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * 表示一个膳食解决方案（相当于遗传算法中的染色体）
+ * 膳食解决方案类（遗传算法中的个体/染色体）
+ * 表示一个完整的膳食搭配方案，包含多种食物及其摄入量
+ * 每个解决方案都有对应的目标函数值、非支配排名和拥挤度距离
+ * 用于NSGA-II多目标优化算法中的个体表示和操作
  */
 public class MealSolution {
-    // 解决方案中包含的食物及其摄入量
+    /** 解决方案中包含的食物基因列表，每个基因代表一种食物及其摄入量 */
     private List<FoodGene> foodGenes;
     
-    // 非支配排序的等级
+    /** 非支配排序等级，数值越小表示解的质量越好（1为最优前沿） */
     private int rank;
     
-    // 拥挤度距离
+    /** 拥挤度距离，用于保持解的多样性，距离越大表示该解在目标空间中越独特 */
     private double crowdingDistance;
     
-    // 目标值列表
+    /** 目标函数值列表，包含营养、偏好、多样性等多个优化目标的评分 */
     private List<ObjectiveValue> objectiveValues;
     
-    // 缓存的营养素总和，避免重复计算
+    /** 缓存的营养素总量，避免重复计算提高性能 */
     private Map<NutrientType, Double> cachedTotalNutrients;
     
     /**
@@ -39,12 +42,14 @@ public class MealSolution {
     }
     
     /**
-     * 创建随机的膳食解决方案
-     * @param foodDatabase 食物数据库
-     * @param minFoods 最少食物数量
-     * @param maxFoods 最多食物数量
-     * @param requireStaple 是否需要主食
-     * @return 随机创建的膳食解决方案
+     * 创建随机膳食解决方案的工厂方法
+     * 根据指定约束条件随机生成一个有效的膳食搭配方案
+     * 支持主食约束、食物数量限制和类别概率选择
+     * @param foodDatabase 可选择的食物数据库
+     * @param minFoods 膳食中最少包含的食物种类数
+     * @param maxFoods 膳食中最多包含的食物种类数
+     * @param requireStaple 是否要求必须包含一个主食
+     * @return 随机生成的有效膳食解决方案
      */
     public static MealSolution createRandom(List<Food> foodDatabase, int minFoods, int maxFoods, boolean requireStaple) {
         if (foodDatabase == null || foodDatabase.isEmpty()) {
@@ -54,12 +59,12 @@ public class MealSolution {
         Random random = new Random();
         List<FoodGene> genes = new ArrayList<>();
         
-        // 食物数量
+        // 确定本次生成的食物种类总数
         int foodCount = random.nextInt(maxFoods - minFoods + 1) + minFoods;
         
-        // 如果需要主食，先添加一个主食
+        // 第一步：如果要求主食，优先添加一个主食
         if (requireStaple) {
-            // 筛选所有主食
+            // 从数据库中筛选出所有主食类食物
             List<Food> staples = foodDatabase.stream()
                     .filter(food -> FoodCategory.STAPLE.equals(food.getCategory()))
                     .collect(Collectors.toList());
@@ -68,75 +73,76 @@ public class MealSolution {
                 // 随机选择一个主食
                 Food staple = staples.get(random.nextInt(staples.size()));
                 
-                // 为主食随机生成一个在推荐范围内的摄入量
+                // 在推荐摄入量范围内随机生成摄入量
                 double minIntake = staple.getRecommendedIntakeRange().getMinIntake();
                 double maxIntake = staple.getRecommendedIntakeRange().getMaxIntake();
                 double intake = minIntake + random.nextDouble() * (maxIntake - minIntake);
                 
-                // 将摄入量四舍五入为整数
+                // 摄入量取整（克为单位）
                 intake = Math.round(intake);
                 
-                // 添加主食基因
+                // 创建主食基因并加入解决方案
                 genes.add(new FoodGene(staple, intake));
                 
-                // 减少需要随机选择的食物数量
+                // 剩余需要选择的食物数量减1
                 foodCount--;
             }
         }
         
-        // 创建候选食物列表，排除已选择的食物
+        // 第二步：准备剩余食物的候选列表
         List<Food> candidateFoods = new ArrayList<>(foodDatabase);
+        // 移除已选择的食物，避免重复
         candidateFoods.removeAll(genes.stream().map(FoodGene::getFood).collect(Collectors.toList()));
         
-        // 如果要求主食有且只有一个，则从候选列表中移除所有主食
+        // 如果要求主食唯一性，从候选列表中移除所有剩余主食
         if (requireStaple) {
             candidateFoods.removeIf(food -> FoodCategory.STAPLE.equals(food.getCategory()));
         }
         
-        // 根据类别对食物进行分组
+        // 按食物类别对候选食物进行分组，便于按类别概率选择
         Map<FoodCategory, List<Food>> foodsByCategory = candidateFoods.stream()
                 .collect(Collectors.groupingBy(Food::getCategory));
         
-        // 随机选择其余食物
+        // 第三步：基于类别概率随机选择剩余食物
         for (int i = 0; i < foodCount && !candidateFoods.isEmpty(); i++) {
-            // 基于概率选择食物类别
+            // 根据各类别的选择概率权重选择食物类别
             FoodCategory selectedCategory = selectCategoryByProbability(foodsByCategory.keySet(), random);
             
-            // 如果没有选中任何类别或者该类别没有剩余食物，随机选择一个非空类别
+            // 处理类别选择失败或该类别食物已用完的情况
             if (selectedCategory == null || foodsByCategory.get(selectedCategory) == null || foodsByCategory.get(selectedCategory).isEmpty()) {
-                // 筛选出有食物的类别
+                // 重新筛选出仍有可选食物的类别
                 List<FoodCategory> availableCategories = foodsByCategory.keySet().stream()
                         .filter(category -> foodsByCategory.get(category) != null && !foodsByCategory.get(category).isEmpty())
                         .collect(Collectors.toList());
                 
                 if (availableCategories.isEmpty()) {
-                    break; // 没有剩余可选食物
+                    break; // 所有食物都已选完，提前结束
                 }
                 
-                // 随机选择一个有食物的类别
+                // 从可用类别中随机选择一个
                 selectedCategory = availableCategories.get(random.nextInt(availableCategories.size()));
             }
             
-            // 从选定类别中随机选择一个食物
+            // 从选定类别中随机选择一个具体食物
             List<Food> foodsInCategory = foodsByCategory.get(selectedCategory);
             Food selectedFood = foodsInCategory.get(random.nextInt(foodsInCategory.size()));
             
-            // 为食物随机生成一个在推荐范围内的摄入量
+            // 在该食物的推荐摄入量范围内随机生成摄入量
             double minIntake = selectedFood.getRecommendedIntakeRange().getMinIntake();
             double maxIntake = selectedFood.getRecommendedIntakeRange().getMaxIntake();
             double intake = minIntake + random.nextDouble() * (maxIntake - minIntake);
             
-            // 将摄入量四舍五入为整数
+            // 摄入量取整
             intake = Math.round(intake);
             
-            // 添加食物基因
+            // 创建食物基因并加入解决方案
             genes.add(new FoodGene(selectedFood, intake));
             
-            // 从候选食物列表中移除已选食物
+            // 从候选列表中移除已选食物，防止重复选择
             foodsInCategory.remove(selectedFood);
             candidateFoods.remove(selectedFood);
             
-            // 如果该类别的食物已经用完，从分组中移除该类别
+            // 如果该类别的食物全部用完，从分组中移除该类别
             if (foodsInCategory.isEmpty()) {
                 foodsByCategory.remove(selectedCategory);
             }
@@ -146,31 +152,32 @@ public class MealSolution {
     }
     
     /**
-     * 根据类别的选中概率选择食物类别
-     * @param categories 可选类别集合
+     * 基于概率权重选择食物类别
+     * 实现轮盘赌选择算法，概率越高的类别越容易被选中
+     * @param categories 可选的食物类别集合
      * @param random 随机数生成器
-     * @return 选中的类别
+     * @return 被选中的食物类别，如果输入为空则返回null
      */
     private static FoodCategory selectCategoryByProbability(Set<FoodCategory> categories, Random random) {
         if (categories == null || categories.isEmpty()) {
             return null;
         }
         
-        // 计算所有可用类别的总概率
+        // 计算所有可用类别的选择概率总和
         double totalProbability = categories.stream()
                 .mapToDouble(FoodCategory::getSelectionProbability)
                 .sum();
         
-        // 如果总概率为0，则所有类别等概率选择
+        // 如果总概率为0或负数，则改为等概率随机选择
         if (totalProbability <= 0) {
             List<FoodCategory> categoryList = new ArrayList<>(categories);
             return categoryList.get(random.nextInt(categoryList.size()));
         }
         
-        // 生成0到总概率之间的随机数
+        // 生成[0, totalProbability)范围内的随机值
         double randomValue = random.nextDouble() * totalProbability;
         
-        // 按概率选择类别
+        // 轮盘赌选择：累计概率达到随机值时选中对应类别
         double cumulativeProbability = 0.0;
         for (FoodCategory category : categories) {
             cumulativeProbability += category.getSelectionProbability();
@@ -179,7 +186,7 @@ public class MealSolution {
             }
         }
         
-        // 如果由于浮点数误差没有选中任何类别，返回第一个
+        // 防止浮点数精度问题导致没有选中，返回任意一个类别
         return categories.iterator().next();
     }
     
@@ -206,75 +213,82 @@ public class MealSolution {
     }
     
     /**
-     * 检查膳食解决方案是否有效
-     * @param requireStaple 是否需要包含主食
-     * @return 是否有效
+     * 验证膳食解决方案的有效性
+     * 检查解决方案是否满足所有约束条件和业务规则
+     * @param requireStaple 是否要求必须包含主食
+     * @return true表示解决方案有效，false表示违反了某些约束
      */
     public boolean isValid(boolean requireStaple) {
-        // 检查是否有足够的食物
+        // 约束1：解决方案不能为空
         if (foodGenes.isEmpty()) {
             return false;
         }
         
-        // 检查主食
+        // 约束2：主食约束检查
         if (requireStaple) {
-            // 计算主食数量
+            // 统计主食数量
             long stapleCount = foodGenes.stream()
                     .filter(gene -> FoodCategory.STAPLE.equals(gene.getFood().getCategory()))
                     .count();
             
-            // 主食必须有且只有一个
+            // 必须有且仅有一个主食
             if (stapleCount != 1) {
                 return false;
             }
         }
         
-        // 检查是否有重复食物
+        // 约束3：食物唯一性检查（不能有重复食物）
         Set<String> foodNames = new HashSet<>();
         for (FoodGene gene : foodGenes) {
             if (!foodNames.add(gene.getFood().getName())) {
-                return false; // 有重复食物
+                return false; // 发现重复食物
             }
         }
         
-        // 检查所有食物的摄入量是否在合理范围内
+        // 约束4：摄入量范围检查（每种食物的摄入量必须在推荐范围内）
         for (FoodGene gene : foodGenes) {
             double intake = gene.getIntake();
             double minIntake = gene.getFood().getRecommendedIntakeRange().getMinIntake();
             double maxIntake = gene.getFood().getRecommendedIntakeRange().getMaxIntake();
             
             if (intake < minIntake || intake > maxIntake) {
-                return false;
+                return false; // 摄入量超出合理范围
             }
         }
         
-        return true;
+        return true; // 通过所有约束检查
     }
     
     /**
-     * 计算解决方案的总营养素
-     * @return 总营养素
+     * 计算膳食解决方案的总营养素含量
+     * 将所有食物基因的营养贡献累加，得到整个膳食的营养素总量
+     * 使用缓存机制避免重复计算，提高性能
+     * @return 包含所有营养素类型及其总量的映射表
      */
     public Map<NutrientType, Double> calculateTotalNutrients() {
-        // 如果已经计算过，直接返回缓存结果
+        // 如果已经计算过且缓存有效，直接返回缓存结果
         if (cachedTotalNutrients != null) {
             return cachedTotalNutrients;
         }
         
+        // 初始化所有营养素类型的总量为0
         Map<NutrientType, Double> totalNutrients = NutrientType.initNutrientItem();
 
+        // 遍历每个食物基因，累加其营养贡献
         for (FoodGene gene : foodGenes) {
             Food food = gene.getFood();
-            double intake = gene.getIntake();
-            double ratio = intake / 100.0; // 食物营养成分通常以每100g为单位
+            double intake = gene.getIntake(); // 实际摄入量（克）
+            double ratio = intake / 100.0;   // 营养成分数据通常基于每100g，需要换算比例
             
+            // 累加该食物对各营养素的贡献
             for (NutrientType type : food.getNutritionItems().keySet()) {
-                double value = food.getNutritionItems().get(type) * ratio;
-                totalNutrients.merge(type, value, Double::sum);
+                double nutritionPer100g = food.getNutritionItems().get(type);
+                double actualNutrition = nutritionPer100g * ratio;
+                totalNutrients.merge(type, actualNutrition, Double::sum);
             }
         }
         
-        // 缓存结果
+        // 缓存计算结果，避免重复计算
         cachedTotalNutrients = totalNutrients;
         return totalNutrients;
     }
@@ -332,29 +346,37 @@ public class MealSolution {
     }
     
     /**
-     * 检查该解决方案是否支配另一个解决方案
-     * @param other 另一个解决方案
-     * @return 是否支配
+     * 判断当前解决方案是否帕累托支配另一个解决方案
+     * 支配关系定义：在所有目标上都不劣于对方，且至少在一个目标上严格优于对方
+     * 用于NSGA-II算法中的非支配排序
+     * @param other 待比较的另一个膳食解决方案
+     * @return true表示当前解支配other，false表示不支配
      */
     public boolean dominates(MealSolution other) {
-        boolean atLeastOneBetter = false;
+        boolean atLeastOneBetter = false; // 标记是否至少在一个目标上更优
         
-        // 比较每个目标值
+        // 逐一比较所有目标函数值
         for (int i = 0; i < objectiveValues.size(); i++) {
             ObjectiveValue thisObj = objectiveValues.get(i);
             ObjectiveValue otherObj = other.objectiveValues.get(i);
+
+            // 跳过权重为0的目标（不参与比较）
+            if (thisObj.getWeight() <= 0) {
+                continue;
+            }
             
-            // 如果本解在任何目标上更差，则不支配other
+            // 如果当前解在任何目标上更差，则不能支配对方
             if (thisObj.getValue() < otherObj.getValue()) {
                 return false;
             }
             
-            // 检查是否至少在一个目标上更好
+            // 记录是否在某个目标上严格更优
             if (thisObj.getValue() > otherObj.getValue()) {
                 atLeastOneBetter = true;
             }
         }
         
+        // 只有在所有目标都不劣于对方，且至少一个目标严格更优时，才构成支配关系
         return atLeastOneBetter;
     }
     

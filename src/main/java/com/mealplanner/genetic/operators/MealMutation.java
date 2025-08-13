@@ -5,7 +5,6 @@ import com.mealplanner.genetic.model.MealSolution;
 import com.mealplanner.model.Food;
 import com.mealplanner.model.FoodCategory;
 import com.mealplanner.model.NutrientType;
-import com.mealplanner.model.Nutrition;
 
 import java.util.*;
 import java.util.stream.Collectors;

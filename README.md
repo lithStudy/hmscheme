@@ -176,4 +176,50 @@
 3. **性能提升**
    - 引入并行计算
    - 优化数据结构
-   - 改进内存管理 
+   - 改进内存管理
+
+com.mealplanner.genetic/
+├── algorithm/          // 核心算法组件
+│   ├── NSGAIIMealPlanner.java      // 主算法控制类
+│   ├── Population.java             // 种群管理
+│   ├── NonDominatedSorting.java    // 非支配排序
+│   └── CrowdingDistanceCalculator.java  // 拥挤度计算
+├── model/              // 数据模型
+│   ├── MealSolution.java           // 膳食解决方案（染色体）
+│   ├── FoodGene.java               // 食物基因
+│   └── ObjectiveValue.java         // 目标值封装
+├── operators/          // 遗传操作
+│   ├── MealCrossover.java          // 交叉操作
+│   ├── MealMutation.java           // 变异操作
+│   └── MealSelection.java          // 选择操作
+├── objectives/         // 多目标评价
+│   ├── NutrientObjective.java      // 营养素目标
+│   ├── PreferenceObjective.java    // 用户偏好目标
+│   ├── DiversityObjective.java     // 多样性目标
+│   ├── BalanceObjective.java       // 餐食平衡目标
+│   ├── AbstractObjectiveEvaluator.java    // 目标评价器抽象类
+│   └── MultiObjectiveEvaluator.java // 多目标评价器
+└── util/               // 辅助工具
+    ├── NSGAIIConfiguration.java    // 算法配置
+    └── NSGAIILogger.java           // 算法日志
+
+主要更新：
+1. 食物选择机制优化
+   - 在FoodCategory中添加选中概率属性
+   - 实现基于概率的食物类别选择
+   - 保持主食选择的特殊处理（有且仅有一个）
+
+2. 目标评估改进
+   - 支持目标权重为0的情况
+   - 在非支配排序中忽略权重为0的目标
+   - 优化目标评分的显示，包含权重信息
+
+3. 评估机制改进
+   - 优化了营养素达成率的计算
+   - 改进了多样性评估方法
+   - 增强了食物组合的合理性评估
+
+注意事项：
+- 权重为0的目标在进化过程中会被完全忽略
+- 食物类别的选择概率可以通过FoodCategory枚举进行调整
+- 主食的选择仍然保持强制性要求（当requireStaple为true时） 

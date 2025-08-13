@@ -57,6 +57,21 @@ public class MealSolutionExcelExporter {
         System.out.println("膳食方案已导出到Excel文件: " + excelFilePath);
     }
 
+    /**
+     * Overload that allows specifying the export path
+     */
+    public static void export(List<MealSolution> solutions, Map<NutrientType, Double> targetNutrients, UserProfile userProfile, String exportPath) {
+        String excelFilePath = (exportPath == null || exportPath.trim().isEmpty()) ? "meal_solutions.xlsx" : exportPath;
+        File excelFile = new File(excelFilePath);
+        if (excelFile.exists()) {
+            System.out.println("将追加到现有文件: " + excelFilePath);
+        } else {
+            System.out.println("\nExcel文件 '" + excelFilePath + "' 不存在，将创建新文件。");
+        }
+        exportToExcel(solutions, targetNutrients, excelFilePath, userProfile);
+        System.out.println("膳食方案已导出到Excel文件: " + excelFilePath);
+    }
+
     
     /**
      * 导出膳食方案到Excel文件

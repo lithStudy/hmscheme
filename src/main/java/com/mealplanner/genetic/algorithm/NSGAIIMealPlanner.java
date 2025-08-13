@@ -10,7 +10,7 @@ import java.util.stream.Collectors;
 
 import com.mealplanner.genetic.model.MealSolution;
 import com.mealplanner.genetic.model.ObjectiveValue;
-import com.mealplanner.genetic.objectives.MultiObjectiveEvaluator;
+import com.mealplanner.genetic.objectives.refactored.MultiObjectiveEvaluator;
 import com.mealplanner.genetic.operators.MealCrossover;
 import com.mealplanner.genetic.operators.MealMutation;
 import com.mealplanner.genetic.operators.MealMutation.MutationType;
@@ -32,7 +32,7 @@ public class NSGAIIMealPlanner {
     private List<Food> foodDatabase;
     // 用户个人信息
     private UserProfile userProfile;
-    // 目标评估器,用于评估解决方案的各项目标值
+    // 优化后的目标评估器
     private MultiObjectiveEvaluator objectiveEvaluator;
     // 交叉算子,用于生成新的解决方案
     private MealCrossover crossover;
@@ -65,8 +65,29 @@ public class NSGAIIMealPlanner {
         this.selection = new MealSelection();
         this.logger = new NSGAIILogger();
         
+        // 配置目标评估器
+        configureObjectiveEvaluator();
+        
         // 使用 NutrientType 中的方法获取营养素达成率
         nutrientRates = NutrientType.getNutrientRates(userProfile);
+        
+        // 从配置同步选择参数
+        try {
+            this.selection.setTournamentSize(config.getTournamentSize());
+        } catch (Exception ignored) {}
+    }
+    
+    /**
+     * 配置目标评估器
+     */
+    private void configureObjectiveEvaluator() {
+        // 使用内置的权重配置
+        objectiveEvaluator.customizeWeights();
+        
+        // 设置评分阈值
+        objectiveEvaluator.setGoodEnoughThreshold(0.8);
+        
+        logger.info("目标评估器配置完成");
     }
     
     
@@ -94,6 +115,10 @@ public class NSGAIIMealPlanner {
         // mutation.setMutationType(MutationType.COMPREHENSIVE);
         
         logger.startAlgorithm(config);
+        logger.info("使用优化后的目标评估器");
+        
+        // 显示目标评估器统计信息
+        objectiveEvaluator.printObjectiveStatistics();
         
         // 初始化种群
         Population population = initializePopulation(this.targetNutrients, requireStaple);
@@ -279,6 +304,7 @@ public class NSGAIIMealPlanner {
                     .allMatch(s -> objectiveEvaluator.isSolutionGoodEnough(s));
             
             if (allGoodEnough) {
+                logger.info("找到足够多的优秀解决方案，提前终止算法");
                 return true;
             }
         }
@@ -300,41 +326,34 @@ public class NSGAIIMealPlanner {
         
         logger.info("原始帕累托前沿解决方案数量: " + allParetoFront.size());
         
-        // 筛选出满足所有营养素最低达成率要求的解决方案
+        // 使用优化后的评估器进行筛选
         List<MealSolution> filteredSolutions = allParetoFront.stream()
-                .filter(solution -> checkAllNutrientsAchievement(solution, targetNutrients))
+                .filter(solution -> objectiveEvaluator.isSolutionGoodEnough(solution))
                 .collect(Collectors.toList());
         
         logger.info("筛选后的解决方案数量: " + filteredSolutions.size());
         
-        // 如果没有解决方案满足要求，则放宽条件，选择营养素偏离度最低的三个解决方案
         if (filteredSolutions.isEmpty()) {
-            logger.warning("没有解决方案满足所有营养素达成率的要求");
+            logger.warning("没有解决方案满足质量要求");
             
-            // 按照营养素偏离度升序排序所有解决方案（偏离度越低越好）
-            // List<MealSolution> sortedSolutions = allParetoFront.stream()
-            //         .sorted(Comparator.comparing(
-            //             solution -> calculateNutrientDeviationScore(solution, targetNutrients)))
-            //         .collect(Collectors.toList());
+            // 按照综合得分排序
             List<MealSolution> sortedSolutions = allParetoFront.stream()
-            .sorted(Comparator.<MealSolution, Double>comparing(
-                            this::calculateAverageObjectiveScore).reversed())
+                    .sorted(Comparator.<MealSolution, Double>comparing(
+                            solution -> objectiveEvaluator.calculateOverallScore(solution)).reversed())
                     .collect(Collectors.toList());
             
-            // 选择前三个解决方案（如果有的话）
             int topCount = Math.min(3, sortedSolutions.size());
             if (topCount > 0) {
-                logger.info("选择营养素偏离度最低的" + topCount + "个解决方案作为替代");
+                logger.info("选择得分最高的" + topCount + "个解决方案作为替代");
                 filteredSolutions.addAll(sortedSolutions.subList(0, topCount));
                 
-                // 记录每个选中方案的营养素偏离度和平均达成率
                 for (int i = 0; i < topCount; i++) {
                     MealSolution solution = sortedSolutions.get(i);
-                    double deviationScore = calculateNutrientDeviationScore(solution, targetNutrients);
-                    double achievementScore = calculateAverageObjectiveScore(solution);
+                    double score = objectiveEvaluator.calculateOverallScore(solution);
+                    boolean isSafe = objectiveEvaluator.getUserPreferenceObjective().isSafe(solution);
                     logger.info("替代方案 #" + (i+1) + 
-                               " 营养素偏离度: " + String.format("%.4f", deviationScore) + 
-                               ", 平均分数: " + String.format("%.2f", achievementScore));
+                               " 得分: " + String.format("%.4f", score) + 
+                               ", 安全性: " + (isSafe ? "安全" : "存在风险"));
                 }
             }
         }
@@ -410,6 +429,21 @@ public class NSGAIIMealPlanner {
     public void setConfig(NSGAIIConfiguration config) {
         this.config = config;
     }
+
+    /**
+     * 获取目标评估器
+     */
+    public MultiObjectiveEvaluator getObjectiveEvaluator() {
+        return objectiveEvaluator;
+    }
+    
+    /**
+     * 设置评估器配置
+     */
+    public void configureObjectiveEvaluator(double goodEnoughThreshold) {
+        objectiveEvaluator.setGoodEnoughThreshold(goodEnoughThreshold);
+        logger.info("评估器阈值设置为: " + goodEnoughThreshold);
+    }
     /**
      * 计算营养素偏离度得分，热量权重更高
      */
@@ -456,6 +490,13 @@ public class NSGAIIMealPlanner {
      */
     public UserProfile getUserProfile() {
         return userProfile;
+    }
+    
+    /**
+     * 提供日志器以便外部配置
+     */
+    public NSGAIILogger getLogger() {
+        return logger;
     }
     
     /**
